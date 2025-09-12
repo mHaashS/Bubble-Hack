@@ -1,2 +1,0 @@
-# Detectron2 pré-compilé
-detectron2 @ https://dl.fbaipublicfiles.com/detectron2/wheels/detectron2-0.6%2Bcu118-cp310-cp310-linux_x86_64.whl 

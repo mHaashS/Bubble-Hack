@@ -94,6 +94,15 @@ def process_image_pipeline_with_bubbles(image_bytes: bytes):
         # Redimensionnement à 800x1200 avec padding
         image = resize_and_pad_cv2(image, target_size=(800, 1200))
         logger.info("Début du pipeline de traitement (with bubbles)")
+        
+        # Vérifier si le predictor est disponible
+        if clean_predictor is None:
+            print("❌ Erreur: Modèle Detectron2 non disponible")
+            # Retourner l'image originale si le modèle n'est pas chargé
+            _, buffer = cv2.imencode('.png', image)
+            result_bytes = buffer.tobytes()
+            return result_bytes, [], None
+        
         outputs = clean_predictor(image)
         cleaned_image = clean_bubbles(image, outputs)
         translations = extract_and_translate(image, outputs)

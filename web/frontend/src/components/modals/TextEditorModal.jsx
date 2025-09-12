@@ -88,10 +88,11 @@ const TextEditorModal = ({ isOpen, imageIndex, images, onClose, onSave }) => {
       
       setEditBubbles(normalizedBubbles);
       
-      // Utiliser la bonne image : cleanedUrl si disponible, sinon result.url
-      const imageToUse = img.cleanedUrl || img.result.url;
-      setEditImageUrl(imageToUse);
-      setEditCleanedUrl(img.cleanedUrl || null);
+      // Forcer l'image de fond sur l'image finale traduite si disponible
+      const finalUrl = img.previewUrl || (img.result && img.result.url) || null;
+      const cleanedUrl = img.cleanedUrl || null;
+      setEditImageUrl(finalUrl);
+      setEditCleanedUrl(cleanedUrl);
       setEditImageSize({width: img.width, height: img.height});
       setInitialAdjustmentDone(false);
       

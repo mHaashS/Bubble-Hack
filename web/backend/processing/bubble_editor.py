@@ -127,19 +127,27 @@ def create_mock_outputs(image, custom_polygons):
         cv2.fillPoly(mask, [polygon], 255)
         
         masks.append(mask.astype(bool))
-        classes.append(polygon_data.get("class", 0))
-        scores.append(polygon_data.get("confidence", 1.0))
+        # Forcer le type "bubble" pour garantir un effacement total lors du retraitement
+        classes.append(0)
+        scores.append(1.0)
     
     # Créer un objet outputs simulé compatible avec Detectron2
     class MockInstances:
         def __init__(self, masks, classes, scores):
-            self.pred_masks = torch.tensor(masks)
-            self.pred_classes = torch.tensor(classes)
-            self.scores = torch.tensor(scores)
+            # Convertir en numpy arrays optimisés puis en tenseurs
+            masks_np = np.array(masks, dtype=bool)
+            classes_np = np.array(classes, dtype=np.int64)
+            scores_np = np.array(scores, dtype=np.float32)
+            self.pred_masks = torch.from_numpy(masks_np)
+            self.pred_classes = torch.from_numpy(classes_np)
+            self.scores = torch.from_numpy(scores_np)
     
     class MockOutputs:
         def __init__(self, masks, classes, scores):
             self.instances = MockInstances(masks, classes, scores)
+        # Permettre la compatibilité avec tests de type "in" accidentels
+        def __contains__(self, item):
+            return False
     
     return MockOutputs(masks, classes, scores)
 

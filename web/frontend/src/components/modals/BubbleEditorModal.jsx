@@ -400,6 +400,7 @@ const BubbleEditorModal = ({ isOpen, imageIndex, images, onClose, onSave, darkMo
         fontSize: 14 // Forcer la taille de police à 14 par défaut
       }));
       
+      // Afficher par défaut l'image FINALE (nettoyée + texte) en prévisualisation
       newImages[imageIndex].result = { url: finalImageUrl, blob: null };
       newImages[imageIndex].bubbles = normalizedBubbles;
       newImages[imageIndex].previewUrl = finalImageUrl;
@@ -409,8 +410,12 @@ const BubbleEditorModal = ({ isOpen, imageIndex, images, onClose, onSave, darkMo
       // Créer le blob pour l'image nettoyée (sans texte) - utilisé par l'éditeur de texte
       newImages[imageIndex].cleanedBlob = base64ToBlob(data.cleaned_base64);
       
-      // Créer le blob pour le téléchargement (utiliser l'image finale avec texte)
+      // Créer le blob pour le téléchargement (conserver l'image finale avec texte)
       newImages[imageIndex].result.blob = base64ToBlob(data.image_base64);
+
+      // Sécurité: mettre aussi l'URL finale traduite dans cleanedUrl si jamais l'éditeur veut afficher la version traduite
+      // (l'éditeur continue toutefois d'utiliser cleanedUrl comme fond pour réédition)
+      newImages[imageIndex].translatedUrl = finalImageUrl;
       
       onSave(newImages);
       onClose();

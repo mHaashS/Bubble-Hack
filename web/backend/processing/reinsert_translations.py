@@ -133,6 +133,21 @@ def draw_text_on_image(image, bubble_data, text):
             logger.error(f"ERREUR: Impossible de charger la police: {e}")
             font = ImageFont.load_default()
         
+        # Avant de dessiner, effacer proprement la zone intérieure de la bulle
+        # pour éviter tout chevauchement avec un texte déjà présent
+        try:
+            clear_left = max(x_min + margin_x, 0)
+            clear_top = max(y_min + margin_y, 0)
+            clear_right = min(x_max - margin_x, img_pil.width)
+            clear_bottom = min(y_max - margin_y, img_pil.height)
+            if clear_right > clear_left and clear_bottom > clear_top:
+                draw.rectangle(
+                    [(clear_left, clear_top), (clear_right, clear_bottom)],
+                    fill=(255, 255, 255)
+                )
+        except Exception as e:
+            logger.warning(f"Nettoyage de la zone de texte impossible: {e}")
+
         # Envelopper le texte
         wrapped_lines = wrap_text(text, font, available_width)
         

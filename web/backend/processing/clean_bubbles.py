@@ -14,11 +14,17 @@ logger = logging.getLogger(__name__)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
+print(f"🔧 SCRIPT_DIR: {SCRIPT_DIR}")
+print(f"🔧 PROJECT_DIR: {PROJECT_DIR}")
+
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
 
 # Essayer de charger le modèle local, sinon utiliser le modèle par défaut
 model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
+print(f"🔧 Chemin du modèle local: {model_path}")
+print(f"🔧 Le fichier existe: {os.path.exists(model_path)}")
+
 if os.path.exists(model_path):
     try:
         cfg.MODEL.WEIGHTS = model_path
@@ -39,6 +45,9 @@ cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3  # bubble, floating_text, narration_box
 cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+print(f"🔧 Device utilisé: {cfg.MODEL.DEVICE}")
+print(f"🔧 CUDA disponible: {torch.cuda.is_available()}")
+
 try:
     predictor = DefaultPredictor(cfg)
     logger.info("Modèle Detectron2 chargé avec succès")
@@ -46,6 +55,8 @@ try:
 except Exception as e:
     logger.error(f"Erreur lors du chargement du modèle: {e}")
     print(f"❌ Erreur chargement modèle: {e}")
+    import traceback
+    traceback.print_exc()
     predictor = None
 
 # === PARAMÈTRES DE NETTOYAGE ===
@@ -58,29 +69,108 @@ CLASS_NAMES = {
 }
 
 def clean_bubbles(image, outputs):
-    # Gérer à la fois les outputs de Detectron2 et nos MockOutputs
-    if hasattr(outputs, 'instances'):
-        # MockOutputs
-        instances = outputs.instances
-    else:
-        # Detectron2 outputs
-        instances = outputs["instances"]
+    """
+    Nettoie les bulles de texte détectées dans l'image
+    """
+    # Autoriser le nettoyage même si le modèle n'est pas chargé lorsque des sorties (outputs) sont fournies
+    # Le modèle est uniquement nécessaire pour effectuer la détection, pas pour appliquer des masques déjà fournis.
+    if predictor is None and outputs is None:
+        print("❌ Erreur: Modèle Detectron2 non chargé et aucune détection fournie (outputs=None)")
+        return image  # Retourner l'image originale si aucune détection n'est possible
     
-    masks = instances.pred_masks.to("cpu").numpy()
-    classes = instances.pred_classes.to("cpu").numpy()
+    try:
+        # Vérifier si outputs est valide
+        if outputs is None:
+            print("❌ Erreur: Aucune détection effectuée")
+            return image
+        
+        # Le reste du code reste identique
+        result = image.copy()
+        height, width = image.shape[:2]
+        
+        # Créer un masque pour l'inpainting (utilisé pour "floating_text")
+        inpaint_mask = np.zeros((height, width), dtype=np.uint8)
+        
+        # Traiter chaque instance détectée (supporte dict ou objet MockOutputs)
+        instances = None
+        if isinstance(outputs, dict) and "instances" in outputs:
+            instances = outputs["instances"]
+        elif hasattr(outputs, "instances"):
+            instances = outputs.instances
+        
+        if instances is not None:
+            # Calculer le nombre d'instances de manière robuste (compat MockInstances)
+            try:
+                num_instances = len(instances)
+            except TypeError:
+                # Fallback si l'objet n'implémente pas __len__ (MockInstances)
+                if hasattr(instances, "pred_masks") and hasattr(instances.pred_masks, "shape"):
+                    num_instances = int(instances.pred_masks.shape[0])
+                else:
+                    num_instances = 0
 
-    result = image.copy()
-
-    for i, mask in enumerate(masks):
-        class_id = classes[i]
-        class_name = CLASS_NAMES.get(class_id, "unknown")
-
-        mask_uint8 = (mask * 255).astype(np.uint8)
-
-        if class_name in ["bubble", "narration_box"]:
-            result[mask > 0] = FILL_COLOR
-        elif class_name == "floating_text":
-            inpaint_mask = cv2.dilate(mask_uint8, np.ones((5, 5), np.uint8), iterations=1)
-            result = cv2.inpaint(result, inpaint_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
-
-    return result 
+            if num_instances == 0:
+                print("ℹ️  Aucune bulle détectée dans l'image")
+                return result
+            
+            print(f"🔍 Traitement de {num_instances} bulles détectées")
+            
+            for i in range(num_instances):
+                # Récupérer le masque de l'instance
+                mask = instances.pred_masks[i].cpu().numpy().astype(np.uint8)
+                # Classe si disponible (0: bubble, 1: floating_text, 2: narration_box)
+                class_id = None
+                if hasattr(instances, "pred_classes"):
+                    try:
+                        class_id = int(instances.pred_classes[i].item())
+                    except Exception:
+                        class_id = 0
+                else:
+                    class_id = 0
+                
+                # Redimensionner le masque à la taille de l'image si nécessaire
+                if mask.shape != (height, width):
+                    mask = cv2.resize(mask, (width, height), interpolation=cv2.INTER_NEAREST)
+                
+                # Si c'est une bulle/boîte de narration → remplissage blanc OPAQUE (avec bord doux)
+                if class_id in (0, 2):
+                    mask255 = (mask > 0).astype(np.uint8) * 255
+                    # Créer une zone intérieure érodée pour garantir un blanc 100% sans fuite de pixels
+                    kernel = np.ones((3, 3), np.uint8)
+                    eroded = cv2.erode(mask255, kernel, iterations=1)
+                    # Bord = masque - intérieur
+                    border = cv2.subtract(mask255, eroded)
+                    # Remplir en blanc l'intérieur (opaque)
+                    result[eroded > 0] = FILL_COLOR
+                    # Appliquer un léger feather uniquement sur le bord pour éviter une coupure nette
+                    if np.any(border):
+                        soft = cv2.GaussianBlur(border, (5, 5), 0)
+                        soft = soft.astype(np.float32) / 255.0
+                        white = np.full_like(result, FILL_COLOR, dtype=np.uint8)
+                        for c in range(3):
+                            result[:, :, c] = (
+                                soft * white[:, :, c] + (1.0 - soft) * result[:, :, c]
+                            ).astype(np.uint8)
+                else:
+                    # Texte flottant → inpainting local
+                    inpaint_mask = cv2.bitwise_or(inpaint_mask, mask)
+        
+        # Appliquer l'inpainting si des bulles ont été détectées
+        if np.any(inpaint_mask):
+            print("🎨 Application de l'inpainting...")
+            # Dilater légèrement le masque pour couvrir les contours du texte
+            kernel = np.ones((3, 3), np.uint8)
+            dilated = cv2.dilate(inpaint_mask, kernel, iterations=1)
+            # Rayon augmenté pour éviter les artefacts
+            result = cv2.inpaint(result, dilated, inpaintRadius=5, flags=cv2.INPAINT_TELEA)
+            print("✅ Inpainting terminé")
+        else:
+            print("ℹ️  Aucune bulle à nettoyer")
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ Erreur lors du nettoyage: {e}")
+        import traceback
+        traceback.print_exc()
+        return image  # Retourner l'image originale en cas d'erreur 
