@@ -114,6 +114,10 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     """Inscription d'un nouvel utilisateur"""
 
+    # Validation du mot de passe
+    if len(user.password) < 8:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 8 caractères")
+
     # Vérifier si l'email existe déjà
 
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -639,6 +643,10 @@ async def reset_password(request: schemas.ResetPassword, db: Session = Depends(g
 
     """Réinitialisation du mot de passe avec un token"""
 
+    # Validation du nouveau mot de passe
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caractères")
+
     # Vérifier le token
 
     reset_token = crud.get_password_reset_token(db, request.token)
@@ -694,6 +702,14 @@ async def change_password(
 ):
 
     """Changement de mot de passe (utilisateur connecté)"""
+
+    # Validation du nouveau mot de passe
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caractères")
+
+    # Vérifier que le nouveau mot de passe est différent de l'ancien
+    if request.current_password == request.new_password:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit être différent de l'ancien")
 
     # Vérifier l'ancien mot de passe
 

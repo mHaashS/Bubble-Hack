@@ -69,8 +69,22 @@ const ProfileModal = ({ isOpen, onClose, user }) => {
         setError('');
         setMessage('');
 
+        // Validation du nouveau mot de passe
+        if (passwordData.newPassword.length < 8) {
+            setError('Le nouveau mot de passe doit contenir au moins 8 caractères');
+            setLoading(false);
+            return;
+        }
+
         if (passwordData.newPassword !== passwordData.confirmPassword) {
             setError('Les mots de passe ne correspondent pas');
+            setLoading(false);
+            return;
+        }
+
+        // Vérifier que le nouveau mot de passe est différent de l'ancien
+        if (passwordData.currentPassword === passwordData.newPassword) {
+            setError('Le nouveau mot de passe doit être différent de l\'ancien');
             setLoading(false);
             return;
         }
@@ -162,6 +176,13 @@ const ProfileModal = ({ isOpen, onClose, user }) => {
         setLoading(true);
         setError('');
         setMessage('');
+
+        // Validation du nouveau mot de passe
+        if (resetPasswordData.newPassword.length < 8) {
+            setError('Le nouveau mot de passe doit contenir au moins 8 caractères');
+            setLoading(false);
+            return;
+        }
 
         if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
             setError('Les mots de passe ne correspondent pas');
