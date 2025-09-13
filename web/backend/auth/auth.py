@@ -51,7 +51,7 @@ def verify_token(token: str):
             print("❌ Pas d'email dans le payload")
             return None
         return email
-    except jwt.JWTError as e:
+    except jwt.InvalidTokenError as e:
         print(f"❌ Erreur JWT: {e}")
         return None
 

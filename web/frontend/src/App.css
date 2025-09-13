@@ -211,6 +211,41 @@ body.dark-mode, html.dark-mode {
   transform: scale(1.05);
 }
 
+.btn-pricing {
+  padding: 8px 16px;
+  border: 2px solid #4f46e5;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  margin-left: 12px;
+}
+
+.btn-pricing:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.btn-pricing-small {
+  padding: 8px 12px;
+  font-size: 16px;
+  margin-right: 8px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-pricing-small:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
 .theme-toggle {
   background: none;
   border: none;
@@ -268,6 +303,7 @@ body.dark-mode, html.dark-mode {
 .dark-mode .subtitle {
   color: #a5b4fc;
 }
+
 
 .upload-form {
   width: 100%;

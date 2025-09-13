@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, status
+from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, status, Request
 
 from fastapi.responses import JSONResponse
 
@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from datetime import datetime, timedelta
+from typing import List
 
 import time
 
@@ -43,6 +44,8 @@ from auth.auth import get_current_active_user, create_access_token, get_password
 # Import du service d'email
 
 from services.email_service import send_password_reset_email, send_welcome_email
+from services.stripe_service import stripe_service
+import stripe
 
 
 
@@ -829,3 +832,255 @@ async def logout(current_user: schemas.User = Depends(get_current_active_user), 
     crud.deactivate_all_user_sessions(db, current_user.id)
 
     return {"message": "Déconnexion réussie"}
+
+
+# ==================== ROUTES D'ABONNEMENTS ====================
+
+@app.get("/subscriptions", response_model=List[schemas.Subscription])
+async def get_available_subscriptions(db: Session = Depends(get_db)):
+    """Récupère tous les abonnements disponibles"""
+    subscriptions = crud.get_all_subscriptions(db)
+    return subscriptions
+
+@app.get("/subscription/status")
+async def get_subscription_status(
+    current_user: schemas.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Récupère le statut d'abonnement de l'utilisateur connecté"""
+    # Récupérer l'abonnement actuel
+    current_subscription = crud.get_user_active_subscription(db, current_user.id)
+    
+    # Récupérer tous les abonnements disponibles
+    available_subscriptions = crud.get_all_subscriptions(db)
+    
+    # Récupérer les quotas actuels
+    quotas = crud.get_user_subscription_quotas(db, current_user.id)
+    
+    # Sérialiser les données
+    response_data = {
+        "current_subscription": None,
+        "available_subscriptions": [],
+        "quotas": quotas
+    }
+    
+    # Sérialiser l'abonnement actuel
+    if current_subscription:
+        response_data["current_subscription"] = {
+            "id": current_subscription.id,
+            "user_id": current_subscription.user_id,
+            "subscription_id": current_subscription.subscription_id,
+            "stripe_subscription_id": current_subscription.stripe_subscription_id,
+            "start_date": current_subscription.start_date.isoformat() if current_subscription.start_date else None,
+            "end_date": current_subscription.end_date.isoformat() if current_subscription.end_date else None,
+            "status": current_subscription.status,
+            "subscription": {
+                "id": current_subscription.subscription.id,
+                "name": current_subscription.subscription.name,
+                "description": current_subscription.subscription.description,
+                "price": current_subscription.subscription.price,
+                "currency": current_subscription.subscription.currency,
+                "stripe_price_id": current_subscription.subscription.stripe_price_id
+            }
+        }
+    
+    # Sérialiser les abonnements disponibles
+    for sub in available_subscriptions:
+        response_data["available_subscriptions"].append({
+            "id": sub.id,
+            "name": sub.name,
+            "description": sub.description,
+            "price": sub.price,
+            "currency": sub.currency,
+            "stripe_price_id": sub.stripe_price_id
+        })
+    
+    return response_data
+
+@app.post("/subscription/checkout", response_model=schemas.CheckoutSessionResponse)
+async def create_checkout_session(
+    request: schemas.CheckoutSessionRequest,
+    current_user: schemas.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Crée une session de checkout Stripe pour un abonnement"""
+    # Récupérer l'abonnement demandé
+    subscription = crud.get_subscription_by_name(db, request.subscription_name)
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Abonnement non trouvé")
+    
+    # URLs de redirection
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    success_url = f"{frontend_url}/subscription/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{frontend_url}/subscription/cancel"
+    
+    try:
+        # Créer ou récupérer le customer Stripe
+        if not current_user.stripe_customer_id:
+            customer_id = stripe_service.create_customer(
+                user_email=current_user.email,
+                user_name=current_user.username
+            )
+            # Sauvegarder le customer_id en base
+            crud.update_user_stripe_customer_id(db, current_user.id, customer_id)
+        else:
+            customer_id = current_user.stripe_customer_id
+        
+        checkout_url = stripe_service.create_checkout_session(
+            price_id=subscription.stripe_price_id,
+            user_email=current_user.email,
+            user_name=current_user.username,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            customer_id=customer_id
+        )
+        
+        return {"checkout_url": checkout_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/subscription/cancel")
+async def cancel_subscription(
+    current_user: schemas.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Annule l'abonnement actuel de l'utilisateur"""
+    user_subscription = crud.get_user_active_subscription(db, current_user.id)
+    if not user_subscription:
+        raise HTTPException(status_code=404, detail="Aucun abonnement actif trouvé")
+    
+    try:
+        # Annuler l'abonnement Stripe
+        stripe_service.cancel_subscription(user_subscription.stripe_subscription_id)
+        
+        # Mettre à jour en base de données
+        crud.update_user_subscription_status(db, user_subscription.stripe_subscription_id, "canceled")
+        
+        # Recréer les quotas Free
+        free_quotas = {"daily": 5, "monthly": 5}
+        crud.create_user_quota_from_subscription(db, current_user.id, free_quotas)
+        
+        return {"message": "Abonnement annulé avec succès"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/subscription/portal")
+async def create_customer_portal_session(
+    current_user: schemas.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Crée une session du portail client Stripe"""
+    if not current_user.stripe_customer_id:
+        raise HTTPException(status_code=404, detail="Aucun customer Stripe trouvé. Veuillez d'abord créer un abonnement.")
+    
+    try:
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        return_url = f"{frontend_url}/subscriptions"
+        
+        portal_url = stripe_service.create_portal_session(
+            customer_id=current_user.stripe_customer_id,
+            return_url=return_url
+        )
+        
+        return {"portal_url": portal_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/subscription/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """Webhook Stripe pour traiter les événements de paiement"""
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature")
+    
+    print(f"🔔 Webhook reçu: {request.method} {request.url}")
+    print(f"📝 Signature: {signature}")
+    print(f"📦 Payload size: {len(payload)} bytes")
+    
+    try:
+        event = stripe_service.handle_webhook(payload, signature)
+        print(f"✅ Événement validé: {event['type']}")
+        
+        if event["type"] == "checkout.session.completed":
+            # Traiter l'abonnement créé
+            session = event["data"]["object"]
+            user_email = session.get("metadata", {}).get("user_email")
+            
+            if not user_email:
+                print("⚠️ Aucun user_email dans les métadonnées, webhook ignoré")
+                return {"status": "ignored", "reason": "no_user_email"}
+            
+            # Récupérer l'utilisateur
+            user = crud.get_user_by_email(db, user_email)
+            if user:
+                # Mettre à jour le customer_id si nécessaire
+                if not user.stripe_customer_id and session.get("customer"):
+                    crud.update_user_stripe_customer_id(db, user.id, session["customer"])
+                
+                # Récupérer l'abonnement Stripe
+                subscription = stripe_service.get_subscription(session["subscription"])
+                
+                # Récupérer les line_items de la session via l'API Stripe
+                session_with_items = stripe.checkout.Session.retrieve(
+                    session["id"], 
+                    expand=['line_items']
+                )
+                
+                # Trouver l'abonnement correspondant en utilisant le price_id
+                price_id = session_with_items["line_items"]["data"][0]["price"]["id"]
+                db_subscription = db.query(models.Subscription).filter(
+                    models.Subscription.stripe_price_id == price_id
+                ).first()
+                
+                if db_subscription:
+                    # Créer l'abonnement utilisateur
+                    crud.create_user_subscription(
+                        db, 
+                        user.id, 
+                        db_subscription.id, 
+                        subscription["id"]
+                    )
+                    
+                    # Mettre à jour les quotas
+                    quotas = stripe_service.get_subscription_quotas(db_subscription.name)
+                    crud.create_user_quota_from_subscription(db, user.id, quotas)
+                    
+                    print(f"✅ Abonnement créé pour {user.email}: {db_subscription.name}")
+        
+        elif event["type"] == "customer.subscription.updated":
+            # Traiter la mise à jour d'abonnement
+            subscription = event["data"]["object"]
+            crud.update_user_subscription_status(db, subscription["id"], subscription["status"])
+        
+        elif event["type"] == "customer.subscription.deleted":
+            # Traiter l'annulation d'abonnement
+            subscription = event["data"]["object"]
+            crud.update_user_subscription_status(db, subscription["id"], "canceled")
+            
+            # Récupérer l'utilisateur et recréer les quotas Free
+            user_subscription = crud.get_user_subscription_by_stripe_id(db, subscription["id"])
+            if user_subscription:
+                free_quotas = {"daily": 5, "monthly": 5}
+                crud.create_user_quota_from_subscription(db, user_subscription.user_id, free_quotas)
+        
+        elif event["type"] == "invoice.payment_succeeded":
+            # Traiter le paiement réussi
+            invoice = event["data"]["object"]
+            if invoice.get("subscription"):
+                # Mettre à jour le statut de l'abonnement
+                crud.update_user_subscription_status(db, invoice["subscription"], "active")
+        
+        elif event["type"] == "invoice.payment_failed":
+            # Traiter l'échec de paiement
+            invoice = event["data"]["object"]
+            if invoice.get("subscription"):
+                # Mettre à jour le statut de l'abonnement
+                crud.update_user_subscription_status(db, invoice["subscription"], "past_due")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        print(f"❌ Erreur webhook Stripe: {e}")
+        import traceback
+        print(f"📋 Traceback complet: {traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=str(e))

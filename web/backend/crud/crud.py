@@ -183,16 +183,34 @@ def create_user_quota(db: Session, user_id: int, quota_type: str, limit_value: i
     db.refresh(quota)
     return quota
 
+def create_user_quota_from_subscription(db: Session, user_id: int, subscription_quotas: dict):
+    """Crée les quotas utilisateur basés sur l'abonnement"""
+    # Supprimer les anciens quotas
+    db.query(models.UserQuota).filter(models.UserQuota.user_id == user_id).delete()
+    
+    # Créer les nouveaux quotas
+    quotas = []
+    for quota_type, limit_value in subscription_quotas.items():
+        if limit_value == -1:
+            # Quota illimité - utiliser 999999 pour la base de données
+            quota = create_user_quota(db, user_id, quota_type, 999999)
+            quotas.append(quota)
+        elif limit_value > 0:
+            quota = create_user_quota(db, user_id, quota_type, limit_value)
+            quotas.append(quota)
+    
+    return quotas
+
 def check_and_update_quota(db: Session, user_id: int, quota_type: str):
     """Vérifie et incrémente le quota (utilisé pour le traitement d'images)"""
     quota = get_user_quota_by_type(db, user_id, quota_type)
 
     if not quota:
-        # Créer un quota par défaut
+        # Créer un quota par défaut (plan Free)
         if quota_type == "daily":
-            limit = 15
+            limit = 5
         elif quota_type == "monthly":
-            limit = 200
+            limit = 5
         else:
             limit = 1000
         quota = create_user_quota(db, user_id, quota_type, limit)
@@ -224,11 +242,11 @@ def check_quota_only(db: Session, user_id: int, quota_type: str):
     quota = get_user_quota_by_type(db, user_id, quota_type)
 
     if not quota:
-        # Créer un quota par défaut
+        # Créer un quota par défaut (plan Free)
         if quota_type == "daily":
-            limit = 15
+            limit = 5
         elif quota_type == "monthly":
-            limit = 200
+            limit = 5
         else:
             limit = 1000
         quota = create_user_quota(db, user_id, quota_type, limit)
@@ -464,4 +482,111 @@ def cleanup_expired_password_resets(db: Session):
         token.is_used = True
     
     db.commit()
-    return len(expired_tokens) 
+    return len(expired_tokens)
+
+# === FONCTIONS POUR LES ABONNEMENTS ===
+
+
+def get_all_subscriptions(db: Session):
+    """Récupère tous les abonnements disponibles"""
+    return db.query(models.Subscription).order_by(models.Subscription.price.asc()).all()
+
+def get_subscription_by_name(db: Session, name: str):
+    """Récupère un abonnement par son nom"""
+    return db.query(models.Subscription).filter(models.Subscription.name == name).first()
+
+
+def get_user_active_subscription(db: Session, user_id: int):
+    """Récupère l'abonnement actif d'un utilisateur"""
+    return db.query(models.UsersSubscription).filter(
+        and_(
+            models.UsersSubscription.user_id == user_id,
+            models.UsersSubscription.status == "active"
+        )
+    ).first()
+
+def create_user_subscription(db: Session, user_id: int, subscription_id: int, stripe_subscription_id: str):
+    """Crée un abonnement utilisateur"""
+    # Désactiver l'ancien abonnement s'il existe
+    old_subscription = get_user_active_subscription(db, user_id)
+    if old_subscription:
+        old_subscription.status = "canceled"
+        old_subscription.end_date = datetime.utcnow()
+    
+    # Créer le nouvel abonnement
+    user_subscription = models.UsersSubscription(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        stripe_subscription_id=stripe_subscription_id
+    )
+    db.add(user_subscription)
+    db.commit()
+    db.refresh(user_subscription)
+    return user_subscription
+
+def update_user_subscription_status(db: Session, stripe_subscription_id: str, status: str):
+    """Met à jour le statut d'un abonnement utilisateur"""
+    subscription = db.query(models.UsersSubscription).filter(
+        models.UsersSubscription.stripe_subscription_id == stripe_subscription_id
+    ).first()
+    
+    if subscription:
+        subscription.status = status
+        if status == "canceled":
+            subscription.end_date = datetime.utcnow()
+        db.commit()
+        db.refresh(subscription)
+    
+    return subscription
+
+def create_payment(db: Session, user_id: int, subscription_id: int, stripe_payment_id: str, amount: float, status: str):
+    """Crée un enregistrement de paiement"""
+    payment = models.Payment(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        stripe_payment_id=stripe_payment_id,
+        amount=amount,
+        status=status
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+def get_user_subscription_quotas(db: Session, user_id: int):
+    """Récupère les quotas d'un utilisateur selon son abonnement"""
+    user_subscription = get_user_active_subscription(db, user_id)
+    
+    if not user_subscription:
+        # Utilisateur sans abonnement = Free
+        return {"daily": 5, "monthly": 5}
+    
+    subscription = user_subscription.subscription
+    if subscription.name.lower() == "free":
+        return {"daily": 5, "monthly": 5}
+    elif subscription.name.lower() == "basic":
+        return {"daily": 50, "monthly": 200}
+    elif subscription.name.lower() == "premium":
+        return {"daily": -1, "monthly": -1}  # -1 = illimité
+    
+    return {"daily": 5, "monthly": 5}  # Par défaut Free
+
+def update_user_stripe_customer_id(db: Session, user_id: int, stripe_customer_id: str):
+    """Met à jour le customer_id Stripe d'un utilisateur"""
+    user = get_user_by_id(db, user_id)
+    if user:
+        user.stripe_customer_id = stripe_customer_id
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(user)
+    return user
+
+def get_user_by_stripe_customer_id(db: Session, stripe_customer_id: str):
+    """Récupère un utilisateur par son customer_id Stripe"""
+    return db.query(models.User).filter(models.User.stripe_customer_id == stripe_customer_id).first()
+
+def get_user_subscription_by_stripe_id(db: Session, stripe_subscription_id: str):
+    """Récupère un abonnement utilisateur par son ID Stripe"""
+    return db.query(models.UsersSubscription).filter(
+        models.UsersSubscription.stripe_subscription_id == stripe_subscription_id
+    ).first() 

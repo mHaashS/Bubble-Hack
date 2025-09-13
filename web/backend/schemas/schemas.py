@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 
 # Schémas pour les utilisateurs
@@ -126,4 +126,63 @@ class PasswordResetToken(BaseModel):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
-    email: Optional[EmailStr] = None 
+    email: Optional[EmailStr] = None
+
+# Schémas pour les abonnements
+class SubscriptionBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    currency: str = "EUR"
+
+class Subscription(SubscriptionBase):
+    id: int
+    stripe_price_id: str
+    
+    class Config:
+        from_attributes = True
+
+class SubscriptionCreate(SubscriptionBase):
+    stripe_price_id: str
+
+class UsersSubscriptionBase(BaseModel):
+    subscription_id: int
+    stripe_subscription_id: str
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    status: str = "active"
+
+class UsersSubscription(UsersSubscriptionBase):
+    id: int
+    user_id: int
+    
+    class Config:
+        from_attributes = True
+
+class PaymentBase(BaseModel):
+    subscription_id: int
+    stripe_payment_id: str
+    amount: float
+    currency: str = "EUR"
+    status: str
+
+class Payment(PaymentBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class CheckoutSessionRequest(BaseModel):
+    subscription_name: str  # "basic" ou "premium"
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
+
+
+class SubscriptionStatus(BaseModel):
+    current_subscription: Optional[UsersSubscription] = None
+    available_subscriptions: List[Subscription] = []
+    quotas: Dict[str, int] = {} 

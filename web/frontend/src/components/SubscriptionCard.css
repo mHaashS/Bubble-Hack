@@ -1,0 +1,432 @@
+.subscription-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px 0 rgba(0, 48, 255, 0.15);
+    padding: 0;
+    margin: 12px;
+    max-width: 280px;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    border: 1.5px solid rgba(0, 48, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.subscription-card.dark-mode {
+    background: #1f2937;
+    box-shadow: 0 6px 24px 0 rgba(81, 0, 255, 0.2);
+    border: 1.5px solid rgba(81, 0, 255, 0.3);
+}
+
+.subscription-card:not(.current):hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 32px 0 rgba(0, 48, 255, 0.25);
+    border-color: rgba(0, 48, 255, 0.4);
+}
+
+.subscription-card.dark-mode:not(.current):hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 32px 0 rgba(81, 0, 255, 0.3);
+    border-color: rgba(81, 0, 255, 0.5);
+}
+
+.subscription-card.current {
+    border: 1.5px solid #00AEFF;
+    box-shadow: 0 8px 32px 0 rgba(0, 48, 255, 0.5);
+    background: #f8fafc;
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.subscription-card.dark-mode.current {
+    border: 1.5px solid #0030FF;
+    box-shadow: 0 8px 32px 0 rgba(81, 0, 255, 0.5);
+    background: #181c2a;
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.subscription-card.free {
+    border-color: rgba(0, 174, 255, 0.3);
+}
+
+/* Header */
+.card-header {
+    padding: 20px 16px 16px;
+    text-align: center;
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    position: relative;
+    border-radius: 12px 12px 0 0;
+    color: white;
+    border-bottom: 1px solid rgba(0, 48, 255, 0.1);
+}
+
+.subscription-card.dark-mode .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    color: white;
+    border-bottom: 1px solid rgba(81, 0, 255, 0.2);
+}
+
+.subscription-card.current .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+    opacity: 0.6;
+}
+
+.subscription-card.free .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    color: white;
+}
+
+.subscription-card.dark-mode.free .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    color: white;
+}
+
+.subscription-card.premium:not(.current) .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    color: white;
+}
+
+.subscription-card.premium.current .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+    opacity: 0.6;
+}
+
+.subscription-card.basic:not(.current) .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 0.6;
+    color: white;
+}
+
+.subscription-card.basic.current .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+    opacity: 0.6;
+}
+
+.plan-name {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: white;
+    transition: color 0.3s ease;
+}
+
+.subscription-card.current .plan-name {
+    color: white;
+}
+
+.subscription-card.dark-mode .plan-name {
+    color: white;
+}
+
+.plan-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+}
+
+.price-amount {
+    font-size: 28px;
+    font-weight: 800;
+    color: white;
+    transition: color 0.3s ease;
+}
+
+.subscription-card.current .price-amount {
+    color: white;
+}
+
+.subscription-card.dark-mode .price-amount {
+    color: white;
+}
+
+.price-period {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.subscription-card.current .price-period {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.subscription-card.dark-mode .price-period {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.price-free {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    transition: color 0.3s ease;
+}
+
+/* Body */
+.card-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.plan-description {
+    color: #6366f1;
+    font-size: 14px;
+    margin: 0 0 16px 0;
+    text-align: center;
+    line-height: 1.5;
+    transition: color 0.3s ease;
+}
+
+/* Quotas */
+.quotas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(0, 174, 255, 0.05);
+    border-radius: 8px;
+    border: 1.5px solid #00AEFF;
+}
+
+.quota-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6366f1;
+    transition: color 0.3s ease;
+}
+
+.quota-item.unlimited {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6366f1;
+}
+
+.quota-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.quota-text {
+    flex: 1;
+}
+
+.subscription-card.dark-mode .quotas {
+    background: rgba(81, 0, 255, 0.05);
+    border: 1.5px solid #0030FF;
+}
+
+.subscription-card.dark-mode .quota-item {
+    color: #a5b4fc;
+}
+
+.subscription-card.dark-mode .quota-item.unlimited {
+    color: #a5b4fc;
+}
+
+/* Features */
+.plan-features {
+    flex: 1;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #6366f1;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+}
+
+.feature:last-child {
+    margin-bottom: 0;
+}
+
+.subscription-card.dark-mode .feature {
+    color: #a5b4fc;
+}
+
+/* Footer */
+.card-footer {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subscription-button {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.subscription-button:not(.current):not(.free) {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+}
+
+.subscription-button:not(.current):not(.free):hover {
+    background: linear-gradient(90deg, #00AEFF 0%, #5100FF 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 48, 255, 0.3);
+}
+
+.subscription-button.premium:not(.current) {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 100%);
+    color: white;
+}
+
+.subscription-button.premium:not(.current):hover {
+    background: linear-gradient(90deg, #0030FF 0%, #5100FF 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 48, 255, 0.3);
+}
+
+.subscription-button.basic:not(.current) {
+    background: linear-gradient(90deg, #0030FF 0%, #5100FF 100%);
+    color: white;
+}
+
+.subscription-button.basic:not(.current):hover {
+    background: linear-gradient(90deg, #00AEFF 0%, #5100FF 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 48, 255, 0.3);
+}
+
+.subscription-button.current {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+    cursor: pointer;
+    border: 2px solid #0030FF;
+}
+
+.subscription-button.current:hover {
+    background: linear-gradient(90deg, #00AEFF 0%, #5100FF 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 48, 255, 0.3);
+}
+
+.subscription-button.free {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: default;
+}
+
+.subscription-card.dark-mode .subscription-button.free {
+    background: #374151;
+    color: #9ca3af;
+}
+
+.subscription-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.manage-button {
+    width: 100%;
+    padding: 12px 24px;
+    border: 2px solid #00AEFF;
+    background: transparent;
+    color: #00AEFF;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.manage-button:hover {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    color: white;
+}
+
+.subscription-card.dark-mode .manage-button {
+    border: 2px solid #60a5fa;
+    color: #60a5fa;
+}
+
+.subscription-card.dark-mode .manage-button:hover {
+    background: linear-gradient(90deg, #60a5fa 0%, #a5b4fc 50%, #c084fc 100%);
+    color: white;
+}
+
+.manage-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .subscription-card {
+        margin: 8px;
+        max-width: 100%;
+    }
+    
+    .card-header {
+        padding: 24px 20px 20px;
+    }
+    
+    .plan-name {
+        font-size: 20px;
+    }
+    
+    .price-amount {
+        font-size: 28px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .card-footer {
+        padding: 20px;
+    }
+}
+
+/* Animation de chargement */
+.subscription-button:disabled::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

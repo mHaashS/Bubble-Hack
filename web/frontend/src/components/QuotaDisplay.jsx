@@ -100,8 +100,20 @@ const QuotaDisplay = () => {
         );
     }
 
-    const dailyPercentage = (quotas.daily_used / quotas.daily_limit) * 100;
-    const monthlyPercentage = (quotas.monthly_used / quotas.monthly_limit) * 100;
+    // Fonction pour formater l'affichage des quotas
+    const formatQuotaDisplay = (quotaValue) => {
+        if (quotaValue === -1 || quotaValue === 999999) {
+            return '∞';
+        }
+        return quotaValue.toString();
+    };
+
+    // Vérifier si les quotas sont illimités
+    const isDailyUnlimited = quotas.daily_limit === -1 || quotas.daily_limit === 999999;
+    const isMonthlyUnlimited = quotas.monthly_limit === -1 || quotas.monthly_limit === 999999;
+
+    const dailyPercentage = isDailyUnlimited ? 0 : (quotas.daily_used / quotas.daily_limit) * 100;
+    const monthlyPercentage = isMonthlyUnlimited ? 0 : (quotas.monthly_used / quotas.monthly_limit) * 100;
 
     const hasWarning = !quotas.can_process && quotas.message;
 
@@ -127,11 +139,11 @@ const QuotaDisplay = () => {
                         <div className="quota-numbers">
                             <span className="used">{quotas.daily_used}</span>
                             <span className="separator">/</span>
-                            <span className="limit">{quotas.daily_limit}</span>
+                            <span className="limit">{formatQuotaDisplay(quotas.daily_limit)}</span>
                         </div>
                     </div>
                     <div className="quota-percentage">
-                        {dailyPercentage.toFixed(1)}%
+                        {isDailyUnlimited ? 'Illimité' : `${dailyPercentage.toFixed(1)}%`}
                     </div>
                 </div>
 
@@ -147,11 +159,11 @@ const QuotaDisplay = () => {
                         <div className="quota-numbers">
                             <span className="used">{quotas.monthly_used}</span>
                             <span className="separator">/</span>
-                            <span className="limit">{quotas.monthly_limit}</span>
+                            <span className="limit">{formatQuotaDisplay(quotas.monthly_limit)}</span>
                         </div>
                     </div>
                     <div className="quota-percentage">
-                        {monthlyPercentage.toFixed(1)}%
+                        {isMonthlyUnlimited ? 'Illimité' : `${monthlyPercentage.toFixed(1)}%`}
                     </div>
                 </div>
 

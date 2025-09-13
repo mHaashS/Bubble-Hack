@@ -454,6 +454,33 @@ class AuthService {
         this.user = { ...this.user, ...userData };
         localStorage.setItem('user', JSON.stringify(this.user));
     }
+
+    // Récupérer les quotas avec gestion d'erreur améliorée
+    async getQuotas() {
+        try {
+            console.log("📊 Récupération des quotas...");
+            console.log("🔑 Token présent:", this.token ? "Oui" : "Non");
+            
+            const response = await fetch(`${API_BASE_URL}/quotas`, {
+                headers: this.getAuthHeaders(),
+            });
+
+            console.log("📡 Réponse quotas:", response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.log("❌ Erreur quotas:", response.status, errorText);
+                throw new Error('Erreur lors de la récupération des quotas');
+            }
+
+            const quotas = await response.json();
+            console.log("✅ Quotas récupérés:", quotas);
+            return { success: true, quotas };
+        } catch (error) {
+            console.log("❌ Erreur lors de la récupération des quotas:", error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Instance singleton

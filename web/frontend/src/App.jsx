@@ -12,6 +12,7 @@ import RegisterModal from './components/RegisterModal';
 import QuotaDisplay from './components/QuotaDisplay';
 import ProfileModal from './components/ProfileModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
+import PricingPage from './components/PricingPage';
 import authService from './services/authService';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [showPricingPage, setShowPricingPage] = useState(false);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   
   // === ÉTATS DES MODALES ===
@@ -42,6 +44,11 @@ function App() {
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
+    
+    // Nettoyer l'URL au chargement de l'application
+    if (window.location.pathname.includes('/subscription/success')) {
+      window.history.replaceState({}, document.title, '/');
+    }
   }, []);
 
   useEffect(() => {
@@ -370,6 +377,15 @@ function App() {
   const progress = images.length === 0 ? 0 : (images.filter(img => img.status === 'terminée' || img.status === 'erreur').length / images.length) * 100;
 
   // === RENDU ===
+  // Si la page de tarification est ouverte, l'afficher
+  if (showPricingPage) {
+    return (
+      <div className={`app-bg ${darkMode ? 'dark-mode' : ''}`}>
+        <PricingPage onClose={() => setShowPricingPage(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className={`app-bg ${darkMode ? 'dark-mode' : ''}`}>
       <div className={`main-card ${darkMode ? 'dark-mode' : ''}`}>
@@ -381,6 +397,17 @@ function App() {
                 <span className="user-info">
                   Bonjour, {user.username}!
                 </span>
+                <button 
+                  className="btn-pricing btn-pricing-small" 
+                  onClick={() => {
+                    // Nettoyer l'URL avant d'ouvrir la page de pricing
+                    window.history.replaceState({}, document.title, '/');
+                    setShowPricingPage(true);
+                  }}
+                  title="Voir les abonnements"
+                >
+                  💎 Abonnements
+                </button>
                 <button 
                   className="btn-profile" 
                   onClick={() => setShowProfileModal(true)}
