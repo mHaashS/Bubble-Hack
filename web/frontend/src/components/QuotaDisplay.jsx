@@ -64,6 +64,42 @@ const QuotaDisplay = () => {
         return null;
     }
 
+    // Vérifie si l'utilisateur est un superuser
+    if (quotas.message && quotas.message.includes("Superuser")) {
+        return (
+            <div className={`quota-display ${isDarkMode ? 'dark-mode' : ''}`}>
+                <div className="quota-header">
+                    <h3>Vos quotas</h3>
+                </div>
+                <div className="quota-cards">
+                    <div className="quota-card daily">
+                        <div className="quota-title">Quotidien</div>
+                        <div className="quota-progress">
+                            <div className="quota-numbers">
+                                <span className="limit">∞</span>
+                            </div>
+                        </div>
+                        <div className="quota-percentage">
+                            Illimité
+                        </div>
+                    </div>
+
+                    <div className="quota-card monthly">
+                        <div className="quota-title">Mensuel</div>
+                        <div className="quota-progress">
+                            <div className="quota-numbers">
+                                <span className="limit">∞</span>
+                            </div>
+                        </div>
+                        <div className="quota-percentage">
+                            Illimité
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const dailyPercentage = (quotas.daily_used / quotas.daily_limit) * 100;
     const monthlyPercentage = (quotas.monthly_used / quotas.monthly_limit) * 100;
 
@@ -129,4 +165,4 @@ const QuotaDisplay = () => {
     );
 };
 
-export default QuotaDisplay; 
+export default QuotaDisplay;

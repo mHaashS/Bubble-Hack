@@ -128,6 +128,10 @@ def increment_image_retreatment(db: Session, user_id: int, image_hash: str):
 
 def check_image_retreatment_limit(db: Session, user_id: int, image_hash: str, max_retreatments: int = 2):
     """Vérifie si l'utilisateur peut encore retraiter cette image spécifique"""
+    user = get_user_by_id(db, user_id)
+    if user and user.is_superuser:
+        return True  # Les superusers n'ont pas de limite
+    
     retreatment = get_image_retreatment(db, user_id, image_hash)
     if not retreatment:
         return True  # Premier retraitement pour cette image

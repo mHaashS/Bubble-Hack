@@ -216,26 +216,18 @@ async def get_user_profile(current_user: schemas.User = Depends(get_current_acti
 async def get_user_quotas(current_user: schemas.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
 
     """Récupérer les quotas de l'utilisateur"""
-
-    quota_status = crud.check_user_quotas(db, current_user.id)
-
+    if current_user.is_superuser:
+        return {"message": "Superuser: Pas de quotas appliqués."}
     
-
+    quota_status = crud.check_user_quotas(db, current_user.id)
+    
     return {
-
         **quota_status,
-
         "retreatment_limit": 2,
-
         "retreatment_info": "Limite de 2 retraitements par image"
-
     }
 
-
-
 # ==================== ROUTES DE TRAITEMENT D'IMAGES (AVEC AUTHENTIFICATION) ====================
-
-
 
 @app.post("/process")
 async def process_image(
@@ -245,14 +237,18 @@ async def process_image(
 ):
     """Traiter une image avec authentification et vérification des quotas"""
     start_time = time.time()
-    
-    print(f"🖼️  Début du traitement pour l'utilisateur: {current_user.email}")
-    print(f"📁 Fichier reçu: {file.filename}, taille: {file.size} bytes")
-    
-    # Vérifier et incrémenter les quotas
-    quota_status = crud.check_and_increment_quotas(db, current_user.id)
-    if not quota_status["can_process"]:
-        raise HTTPException(status_code=429, detail=quota_status["message"])
+    # Vérifier si l'utilisateur est un superutilisateur
+    if current_user.is_superuser:
+        # Pour les superusers, on crée un statut spécial
+        quota_status = {
+            "can_process": True,
+            "message": "Superuser: Pas de quotas appliqués."
+        }
+    else:
+        # Vérifier et incrémenter les quotas
+        quota_status = crud.check_and_increment_quotas(db, current_user.id)
+        if not quota_status["can_process"]:
+            raise HTTPException(status_code=429, detail=quota_status["message"])
     
     # Traitement de l'image
     image_bytes = await file.read()
@@ -832,4 +828,4 @@ async def logout(current_user: schemas.User = Depends(get_current_active_user), 
 
     crud.deactivate_all_user_sessions(db, current_user.id)
 
-    return {"message": "Déconnexion réussie"} 
+    return {"message": "Déconnexion réussie"}
