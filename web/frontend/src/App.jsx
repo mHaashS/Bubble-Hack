@@ -28,6 +28,7 @@ function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
   
   // === ÉTATS DES MODALES ===
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,6 +74,15 @@ function App() {
     }
   }, []);
 
+  // Vérifier les quotas quand l'utilisateur change
+  useEffect(() => {
+    if (user) {
+      checkQuotas();
+    } else {
+      setDailyLimitReached(false);
+    }
+  }, [user]);
+
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setShowLoginModal(false);
@@ -88,6 +98,22 @@ function App() {
     setUser(null);
     setFiles([]);
     setImages([]);
+    setDailyLimitReached(false);
+  };
+
+  // Fonction pour vérifier les quotas
+  const checkQuotas = async () => {
+    if (user && authService.isAuthenticated()) {
+      try {
+        const result = await authService.getQuotas();
+        if (result.success && result.quotas) {
+          const quotas = result.quotas;
+          setDailyLimitReached(!quotas.can_process && quotas.message && quotas.message.includes("quotidienne"));
+        }
+      } catch (error) {
+        console.log("Erreur lors de la vérification des quotas:", error);
+      }
+    }
   };
 
   const switchToRegister = () => {
@@ -273,6 +299,9 @@ function App() {
     }
 
     setIsProcessing(false);
+    
+    // Vérifier les quotas après le traitement
+    checkQuotas();
   };
 
   // === FONCTIONS DES MODALES ===
@@ -388,7 +417,7 @@ function App() {
         </div>
         
         {/* Logo et quotas sur la même ligne */}
-        <div className="logo-quota-container">
+        <div className={`logo-quota-container ${dailyLimitReached ? 'with-daily-limit' : ''}`}>
           <div className="logo-container">
             <img 
               src={darkMode ? "/logo-bubble-hack-dark.png" : "/logo-bubble-hack-light.png"} 

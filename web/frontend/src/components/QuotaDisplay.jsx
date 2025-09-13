@@ -103,8 +103,10 @@ const QuotaDisplay = () => {
     const dailyPercentage = (quotas.daily_used / quotas.daily_limit) * 100;
     const monthlyPercentage = (quotas.monthly_used / quotas.monthly_limit) * 100;
 
+    const hasWarning = !quotas.can_process && quotas.message;
+
     return (
-        <div className={`quota-display ${isDarkMode ? 'dark-mode' : ''}`}>
+        <div className={`quota-display ${isDarkMode ? 'dark-mode' : ''} ${hasWarning ? 'with-warning' : ''}`}>
             <div className="quota-header">
                 <h3>Vos quotas</h3>
                 <button className="refresh-button" onClick={loadQuotas}>

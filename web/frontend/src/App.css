@@ -66,6 +66,7 @@ body.dark-mode, html.dark-mode {
   width: 100%;
   margin-bottom: 20px;
   position: relative;
+  z-index: 20; /* S'assurer que les boutons restent au-dessus */
 }
 
 .top-buttons {
@@ -86,6 +87,14 @@ body.dark-mode, html.dark-mode {
   position: relative;
 }
 
+/* Taille fixe quand la limite quotidienne est atteinte */
+.logo-quota-container.with-daily-limit {
+  width: 950px;
+  height: 230px;
+  margin: 20px auto 30px auto;
+  z-index: 10; /* Rester en dessous des boutons du haut */
+}
+
 .quota-container {
   display: flex;
   justify-content: flex-end;
@@ -94,6 +103,7 @@ body.dark-mode, html.dark-mode {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
+  z-index: 15; /* Au-dessus du container mais en dessous des boutons */
 }
 
 /* Ancien header-container pour compatibilité */

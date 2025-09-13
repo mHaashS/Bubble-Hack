@@ -8,6 +8,8 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    max-width: 320px; /* Limiter la largeur totale du composant */
+    width: 100%;
 }
 
 .quota-header {
@@ -143,6 +145,17 @@
     font-size: 14px;
     font-weight: 500;
     border: 1px solid rgba(255, 193, 7, 0.3);
+    max-width: 300px; /* Limiter la largeur pour éviter le débordement */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+/* Augmenter les marges quand il y a un message d'avertissement */
+.quota-display.with-warning {
+    margin-top: 40px;
+    margin-bottom: 40px;
 }
 
 .quota-loading {
@@ -226,10 +239,21 @@
     .quota-display {
         padding: 15px;
         margin: 15px 0;
+        max-width: 100%; /* Sur mobile, utiliser toute la largeur disponible */
+    }
+    
+    /* Augmenter les marges sur mobile quand il y a un message d'avertissement */
+    .quota-display.with-warning {
+        margin-top: 30px;
+        margin-bottom: 30px;
     }
     
     .quota-header h3 {
         font-size: 16px;
+    }
+    
+    .quota-warning {
+        max-width: 100%; /* Sur mobile, utiliser toute la largeur disponible */
     }
 }
 
