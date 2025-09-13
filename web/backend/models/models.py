@@ -117,6 +117,7 @@ class UsersSubscription(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    stripe_subscription_id = Column(String, nullable=False)
     start_date = Column(DateTime(timezone=True), server_default=func.now())
     end_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(50), default="active")  # active, canceled, expired
