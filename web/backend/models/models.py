@@ -21,6 +21,8 @@ class User(Base):
     quotas = relationship("UserQuota", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
     password_resets = relationship("PasswordReset", back_populates="user")
+    subscriptions = relationship("UsersSubscription", back_populates="user")
+    payments = relationship("Payment", back_populates="user")
 
 class UsageStats(Base):
     __tablename__ = "usage_stats"
@@ -95,3 +97,47 @@ class PasswordReset(Base):
     
     # Relations
     user = relationship("User", back_populates="password_resets") 
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    price = Column(Float, nullable=False)
+    currency = Column(String(10), default="EUR")
+    stripe_price_id = Column(String, nullable=False)
+
+    # Relations
+    users_subscriptions = relationship("UsersSubscription", back_populates="subscription")
+    payments = relationship("Payment", back_populates="subscription")
+
+class UsersSubscription(Base):
+    __tablename__ = "users_subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    start_date = Column(DateTime(timezone=True), server_default=func.now())
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(50), default="active")  # active, canceled, expired
+
+    # Relations
+    user = relationship("User", back_populates="subscriptions")
+    subscription = relationship("Subscription", back_populates="users_subscriptions")
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    stripe_payment_id = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="EUR")
+    status = Column(String(50), nullable=False)  # succeeded, pending, failed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relations
+    user = relationship("User", back_populates="payments")
+    subscription = relationship("Subscription", back_populates="payments")
