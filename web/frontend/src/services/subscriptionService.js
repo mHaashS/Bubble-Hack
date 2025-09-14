@@ -2,9 +2,10 @@
  * Service de gestion des abonnements Stripe
  */
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://api.bubblehack.fr'
-    : 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+    (process.env.NODE_ENV === 'production'
+        ? 'https://bubble-hack-production.up.railway.app'  // Production (Railway)
+        : 'http://localhost:8000');      // Développement local
 
 class SubscriptionService {
     constructor() {

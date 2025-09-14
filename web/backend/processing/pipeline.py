@@ -96,6 +96,7 @@ def process_image_pipeline_with_bubbles(image_bytes: bytes):
         logger.info("Début du pipeline de traitement (with bubbles)")
         
         # Vérifier si le predictor est disponible
+        print(f"🔧 État du predictor: {clean_predictor}")
         if clean_predictor is None:
             print("❌ Erreur: Modèle Detectron2 non disponible")
             # Retourner l'image originale si le modèle n'est pas chargé

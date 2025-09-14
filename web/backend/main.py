@@ -81,7 +81,8 @@ origins = [
     "https://bubblehack.fr",
     "https://bubble-cleaner-frontend.vercel.app",
     "https://bubble-hack.vercel.app",
-    "https://bubblehack.vercel.app"
+    "https://bubblehack.vercel.app",
+    "https://bubble-hack-production.up.railway.app"  # Backend Railway pour les requêtes inter-domaines
 ]
 
 

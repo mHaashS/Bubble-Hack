@@ -49,9 +49,11 @@ print(f"🔧 Device utilisé: {cfg.MODEL.DEVICE}")
 print(f"🔧 CUDA disponible: {torch.cuda.is_available()}")
 
 try:
+    print("🔧 Tentative de chargement du modèle Detectron2...")
     predictor = DefaultPredictor(cfg)
     logger.info("Modèle Detectron2 chargé avec succès")
     print("✅ Modèle Detectron2 chargé avec succès")
+    print(f"🔧 Type du predictor: {type(predictor)}")
 except Exception as e:
     logger.error(f"Erreur lors du chargement du modèle: {e}")
     print(f"❌ Erreur chargement modèle: {e}")
