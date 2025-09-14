@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import logging
 import traceback
-from .clean_bubbles import clean_bubbles, predictor as clean_predictor
+from .clean_bubbles import clean_bubbles
 from .translate_bubbles import extract_and_translate, predictor as translate_predictor
 from .reinsert_translations import draw_translated_text
 import base64
@@ -95,16 +95,16 @@ def process_image_pipeline_with_bubbles(image_bytes: bytes):
         image = resize_and_pad_cv2(image, target_size=(800, 1200))
         logger.info("Début du pipeline de traitement (with bubbles)")
         
-        # Vérifier si le predictor est disponible
-        print(f"🔧 État du predictor: {clean_predictor}")
-        if clean_predictor is None:
-            print("❌ Erreur: Modèle Detectron2 non disponible")
-            # Retourner l'image originale si le modèle n'est pas chargé
-            _, buffer = cv2.imencode('.png', image)
-            result_bytes = buffer.tobytes()
-            return result_bytes, [], None
+        # Charger le modèle de manière paresseuse
+        from .clean_bubbles import load_predictor
+        try:
+            predictor = load_predictor()
+            print(f"🔧 État du predictor: {predictor}")
+        except Exception as e:
+            print(f"❌ Erreur: Impossible de charger le modèle Detectron2: {e}")
+            raise Exception(f"Modèle Detectron2 requis mais non disponible: {e}")
         
-        outputs = clean_predictor(image)
+        outputs = predictor(image)
         cleaned_image = clean_bubbles(image, outputs)
         translations = extract_and_translate(image, outputs)
         if translations:

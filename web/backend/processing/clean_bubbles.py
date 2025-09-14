@@ -20,26 +20,29 @@ print(f"🔧 PROJECT_DIR: {PROJECT_DIR}")
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
 
-# Essayer de charger le modèle local, sinon utiliser le modèle par défaut
+# Utiliser uniquement le modèle personnalisé
 model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
 print(f"🔧 Chemin du modèle local: {model_path}")
 print(f"🔧 Le fichier existe: {os.path.exists(model_path)}")
 
-if os.path.exists(model_path):
-    try:
-        cfg.MODEL.WEIGHTS = model_path
-        logger.info(f"Chargement du modèle local: {model_path}")
-        print(f"✅ Modèle local chargé: {model_path}")
-    except Exception as e:
-        logger.warning(f"Erreur lors du chargement du modèle local: {e}")
-        print(f"⚠️  Erreur modèle local: {e}")
-        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-        logger.info("Utilisation du modèle par défaut Detectron2")
-        print("🔄 Utilisation du modèle par défaut Detectron2")
-else:
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-    logger.info("Modèle local non trouvé, utilisation du modèle par défaut Detectron2")
-    print("🔄 Modèle local non trouvé, utilisation du modèle par défaut")
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Modèle personnalisé non trouvé: {model_path}")
+
+# Vérifier la taille du fichier
+file_size = os.path.getsize(model_path)
+print(f"🔧 Taille du fichier: {file_size} bytes")
+
+# Vérifier si le fichier est valide
+try:
+    import torch
+    test_model = torch.load(model_path, map_location='cpu', weights_only=False)
+    print(f"✅ Modèle local valide (taille: {file_size} bytes)")
+    cfg.MODEL.WEIGHTS = model_path
+    logger.info(f"Chargement du modèle personnalisé: {model_path}")
+except Exception as e:
+    logger.error(f"Erreur lors de la validation du modèle personnalisé: {e}")
+    print(f"❌ Erreur validation modèle personnalisé: {e}")
+    raise Exception(f"Impossible de charger le modèle personnalisé: {e}")
 
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3  # bubble, floating_text, narration_box
@@ -48,18 +51,28 @@ cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"🔧 Device utilisé: {cfg.MODEL.DEVICE}")
 print(f"🔧 CUDA disponible: {torch.cuda.is_available()}")
 
-try:
-    print("🔧 Tentative de chargement du modèle Detectron2...")
-    predictor = DefaultPredictor(cfg)
-    logger.info("Modèle Detectron2 chargé avec succès")
-    print("✅ Modèle Detectron2 chargé avec succès")
-    print(f"🔧 Type du predictor: {type(predictor)}")
-except Exception as e:
-    logger.error(f"Erreur lors du chargement du modèle: {e}")
-    print(f"❌ Erreur chargement modèle: {e}")
-    import traceback
-    traceback.print_exc()
-    predictor = None
+# Chargement paresseux du modèle
+predictor = None
+
+def load_predictor():
+    """Charger le modèle Detectron2 de manière paresseuse"""
+    global predictor
+    if predictor is not None:
+        return predictor
+    
+    try:
+        print("🔧 Tentative de chargement du modèle Detectron2...")
+        predictor = DefaultPredictor(cfg)
+        logger.info("Modèle Detectron2 chargé avec succès")
+        print("✅ Modèle Detectron2 chargé avec succès")
+        print(f"🔧 Type du predictor: {type(predictor)}")
+        return predictor
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement du modèle: {e}")
+        print(f"❌ Erreur chargement modèle: {e}")
+        import traceback
+        traceback.print_exc()
+        raise Exception(f"Impossible de charger le modèle Detectron2: {e}")
 
 # === PARAMÈTRES DE NETTOYAGE ===
 FILL_COLOR = (255, 255, 255)  # Blanc
@@ -76,8 +89,8 @@ def clean_bubbles(image, outputs):
     """
     # Autoriser le nettoyage même si le modèle n'est pas chargé lorsque des sorties (outputs) sont fournies
     # Le modèle est uniquement nécessaire pour effectuer la détection, pas pour appliquer des masques déjà fournis.
-    if predictor is None and outputs is None:
-        print("❌ Erreur: Modèle Detectron2 non chargé et aucune détection fournie (outputs=None)")
+    if outputs is None:
+        print("❌ Erreur: Aucune détection fournie (outputs=None)")
         return image  # Retourner l'image originale si aucune détection n'est possible
     
     try:
