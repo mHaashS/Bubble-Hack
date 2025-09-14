@@ -91,9 +91,6 @@ Visitez **[bubblehack.fr](https://bubblehack.fr)** pour utiliser l'application d
 
 ### **Frontend (Application Web)**
 - **React 18** - Interface utilisateur moderne et réactive
-- **Material-UI** - Composants d'interface élégants
-- **JavaScript ES6+** - Logique côté client
-- **CSS3** - Styles et animations
 
 ### **Backend (API)**
 - **FastAPI** - API REST moderne et performante
