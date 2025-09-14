@@ -92,14 +92,33 @@ def load_predictor():
     """Charger le modèle Detectron2 de manière paresseuse"""
     global predictor
     if predictor is not None:
+        print("✅ Modèle déjà chargé, réutilisation")
         return predictor
     
     try:
         print("🔧 Tentative de chargement du modèle Detectron2...")
+        print(f"🔧 Configuration: {cfg.MODEL.WEIGHTS}")
+        print(f"🔧 Device: {cfg.MODEL.DEVICE}")
+        print(f"🔧 Classes: {cfg.MODEL.ROI_HEADS.NUM_CLASSES}")
+        
+        # Vérifier la mémoire disponible
+        import psutil
+        memory = psutil.virtual_memory()
+        print(f"🔧 Mémoire disponible: {memory.available / 1024**3:.1f} GB")
+        print(f"🔧 Mémoire utilisée: {memory.percent}%")
+        
         predictor = DefaultPredictor(cfg)
         logger.info("Modèle Detectron2 chargé avec succès")
         print("✅ Modèle Detectron2 chargé avec succès")
         print(f"🔧 Type du predictor: {type(predictor)}")
+        
+        # Test rapide du modèle
+        print("🔧 Test du modèle avec une image factice...")
+        import numpy as np
+        test_image = np.zeros((100, 100, 3), dtype=np.uint8)
+        test_output = predictor(test_image)
+        print(f"✅ Test du modèle réussi: {len(test_output['instances'])} détections")
+        
         return predictor
     except Exception as e:
         logger.error(f"Erreur lors du chargement du modèle: {e}")

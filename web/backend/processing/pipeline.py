@@ -98,13 +98,16 @@ def process_image_pipeline_with_bubbles(image_bytes: bytes):
         # Charger le modèle de manière paresseuse
         from .clean_bubbles import load_predictor
         try:
+            print("🔧 Chargement du modèle Detectron2...")
             predictor = load_predictor()
             print(f"🔧 État du predictor: {predictor}")
         except Exception as e:
             print(f"❌ Erreur: Impossible de charger le modèle Detectron2: {e}")
             raise Exception(f"Modèle Detectron2 requis mais non disponible: {e}")
         
+        print("🔧 Exécution de la détection...")
         outputs = predictor(image)
+        print(f"✅ Détection terminée: {len(outputs['instances'])} objets détectés")
         cleaned_image = clean_bubbles(image, outputs)
         translations = extract_and_translate(image, outputs)
         if translations:

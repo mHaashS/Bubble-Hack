@@ -32,6 +32,7 @@ fastapi_mail==1.5.0
 # Utils
 python-dotenv==1.1.1
 pydantic==2.11.7
+psutil==5.9.8
 
 # Stripe
 stripe==10.0.0
