@@ -158,15 +158,19 @@ async def register(user: schemas.UserCreate, request: Request, db: Session = Dep
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà pris")
 
     # Créer l'utilisateur (non vérifié par défaut)
+    print(f"🔧 Création de l'utilisateur: {user.email}, {user.username}")
     hashed_password = get_password_hash(user.password)
     db_user = crud.create_user(db, user.email, user.username, hashed_password)
+    print(f"✅ Utilisateur créé avec ID: {db_user.id}")
     
     # Marquer l'utilisateur comme non vérifié
     db_user.is_verified = False
     db.commit()
     db.refresh(db_user)
+    print(f"✅ Utilisateur marqué comme non vérifié")
     
     # Enregistrer la création du compte pour l'anti-abus
+    print(f"🔧 Enregistrement anti-abus...")
     crud.track_account_creation(
         db,
         ip_address=client_ip,
@@ -174,15 +178,20 @@ async def register(user: schemas.UserCreate, request: Request, db: Session = Dep
         device_fingerprint=device_fingerprint,
         email_domain=email_domain
     )
+    print(f"✅ Anti-abus enregistré")
     
     # Créer un token de vérification email
+    print(f"🔧 Création du token de vérification...")
     verification_token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(hours=24)
     crud.create_email_verification(db, db_user.id, verification_token, expires_at)
+    print(f"✅ Token de vérification créé")
     
     # Envoyer l'email de vérification
+    print(f"🔧 Envoi de l'email de vérification...")
     from services.email_service import send_verification_email
     await send_verification_email(db_user.email, db_user.username, verification_token)
+    print(f"✅ Email de vérification envoyé")
 
     
 
@@ -199,7 +208,7 @@ async def register(user: schemas.UserCreate, request: Request, db: Session = Dep
         # On ne fait pas échouer l'inscription si l'email échoue
 
     
-
+    print(f"🎉 Inscription terminée avec succès pour {db_user.email}")
     return db_user
 
 

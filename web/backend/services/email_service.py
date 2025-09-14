@@ -82,11 +82,11 @@ async def send_password_reset_email(email: EmailStr, username: str, reset_token:
 
                 <div style="text-align: center; margin-bottom: 30px;">
 
-                    <img src="{get_logo_url()}" alt="Bubble Cleaner" style="height: 60px; width: auto;">
+                    <img src="{get_logo_url()}" alt="Bubble Hack" style="height: 60px; width: auto;">
 
                 </div>
 
-                <h2 style="color: #667eea; text-align: center;">Bubble Cleaner - Réinitialisation de mot de passe</h2>
+                <h2 style="color: #667eea; text-align: center;">Bubble Hack - Réinitialisation de mot de passe</h2>
 
                 
 
@@ -94,7 +94,7 @@ async def send_password_reset_email(email: EmailStr, username: str, reset_token:
 
                 
 
-                <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte Bubble Cleaner.</p>
+                <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte Bubble Hack.</p>
 
                 
 
@@ -164,7 +164,7 @@ async def send_password_reset_email(email: EmailStr, username: str, reset_token:
 
         message = MessageSchema(
 
-            subject="Bubble Cleaner - Réinitialisation de mot de passe",
+            subject="Bubble Hack - Réinitialisation de mot de passe",
 
             recipients=[email],
 
@@ -205,181 +205,239 @@ async def send_password_reset_email(email: EmailStr, username: str, reset_token:
 
 
 async def send_welcome_email(email: EmailStr, username: str):
-
-    """Envoyer un email de bienvenue"""
-
+    """Envoyer un email de bienvenue via Mailgun API"""
     try:
-
-        conf = get_email_config()
-
-        fm = FastMail(conf)
-
+        import requests
         
-
-        html_content = f"""
-
-        <html>
-
-        <body>
-
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-
-                <div style="text-align: center; margin-bottom: 30px;">
-
-                    <img src="{get_logo_url()}" alt="Bubble Cleaner" style="height: 60px; width: auto;">
-
-                </div>
-
-                <h2 style="color: #667eea; text-align: center;">Bienvenue sur Bubble Cleaner !</h2>
-
-                
-
-                <p>Bonjour {username},</p>
-
-                
-
-                <p>Bienvenue sur Bubble Cleaner ! Votre compte a été créé avec succès.</p>
-
-                
-
-                <p>Vous pouvez maintenant :</p>
-
-                <ul>
-
-                    <li>Nettoyer automatiquement les bulles de texte de vos images</li>
-
-                    <li>Traduire le contenu des bulles</li>
-
-                    <li>Éditer manuellement les zones de bulles</li>
-
-                    <li>Gérer vos quotas d'utilisation</li>
-
-                </ul>
-
-                
-
-                <p>Profitez de votre expérience Bubble Cleaner !</p>
-
-                
-
-                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-
-                
-
-                <p style="color: #6b7280; font-size: 14px; text-align: center;">
-
-                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
-
-                </p>
-
-            </div>
-
-        </body>
-
-        </html>
-
-        """
-
+        # Configuration Mailgun
+        mailgun_domain = os.getenv("MAILGUN_DOMAIN", "bubblehack.fr")
+        mailgun_api_key = os.getenv("MAILGUN_API_KEY", "your-api-key")
         
+        # URL de l'API Mailgun (utilise le domaine EU)
+        api_url = f"https://api.eu.mailgun.net/v3/{mailgun_domain}/messages"
+        
+        # Données de l'email
+        data = {
+            "from": f"Bubble Hack <noreply@{mailgun_domain}>",
+            "to": f"{username} <{email}>",
+            "subject": "Bienvenue sur Bubble Hack !",
+            "text": f"""
+Bonjour {username},
 
-        message = MessageSchema(
+Bienvenue sur Bubble Hack ! Votre compte a été créé avec succès.
 
-            subject="Bienvenue sur Bubble Cleaner !",
+Vous pouvez maintenant :
+- Nettoyer automatiquement les bulles de texte de vos images
+- Traduire le contenu des bulles
+- Éditer manuellement les zones de bulles
+- Gérer vos quotas d'utilisation
 
-            recipients=[email],
+Profitez de votre expérience Bubble Hack !
 
-            body=html_content,
-
-            subtype="html"
-
+Cordialement,
+L'équipe Bubble Hack
+            """,
+            "html": f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bienvenue sur Bubble Hack</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://bubblehack.fr/logo.svg" alt="Bubble Hack" style="height: 60px; width: auto;">
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #333;">🎉 Bienvenue sur Bubble Hack !</h1>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Bonjour {username},</h2>
+        <p style="color: #666; line-height: 1.6;">
+            Félicitations ! Votre compte Bubble Hack a été créé avec succès. 
+            Vous pouvez maintenant profiter de toutes nos fonctionnalités.
+        </p>
+    </div>
+    
+    <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3 style="color: #2d5a2d; margin-top: 0;">✨ Ce que vous pouvez faire :</h3>
+        <ul style="color: #666; line-height: 1.8;">
+            <li><strong>🧹 Nettoyer automatiquement</strong> les bulles de texte de vos images</li>
+            <li><strong>🌍 Traduire le contenu</strong> des bulles dans votre langue</li>
+            <li><strong>✏️ Éditer manuellement</strong> les zones de bulles</li>
+            <li><strong>📊 Gérer vos quotas</strong> d'utilisation</li>
+        </ul>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="https://bubblehack.fr" 
+           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                  color: white; 
+                  padding: 15px 30px; 
+                  text-decoration: none; 
+                  border-radius: 5px; 
+                  font-weight: bold; 
+                  display: inline-block;">
+            🚀 Commencer maintenant
+        </a>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 12px;">
+            Cordialement,<br>
+            L'équipe Bubble Hack
+        </p>
+    </div>
+</body>
+</html>
+            """
+        }
+        
+        print(f"📧 Envoi email de bienvenue via Mailgun API vers {email}")
+        print(f"🌐 Domaine Mailgun: {mailgun_domain}")
+        
+        # Envoi via l'API Mailgun
+        response = requests.post(
+            api_url,
+            auth=("api", mailgun_api_key),
+            data=data,
+            timeout=30
         )
-
         
-
-        await fm.send_message(message)
-
-        return True
-
+        print(f"📡 Réponse Mailgun (bienvenue): {response.status_code}")
         
-
+        if response.status_code == 200:
+            print(f"✅ Email de bienvenue envoyé à {email}")
+            return True
+        else:
+            print(f"❌ Erreur API Mailgun (bienvenue): {response.status_code} - {response.text}")
+            return False
+            
     except Exception as e:
-
-        print(f"Erreur lors de l'envoi de l'email de bienvenue: {e}")
-
+        print(f"❌ Erreur lors de l'envoi de l'email de bienvenue: {e}")
         return False
 
 async def send_verification_email(email: EmailStr, username: str, verification_token: str):
-    """Envoyer un email de vérification"""
+    """Envoyer un email de vérification via Mailgun API"""
     try:
-        conf = get_email_config()
-        fm = FastMail(conf)
+        import requests
         
-        # URL de vérification (à adapter selon votre frontend)
+        # Configuration Mailgun
+        mailgun_domain = os.getenv("MAILGUN_DOMAIN", "bubblehack.fr")
+        mailgun_api_key = os.getenv("MAILGUN_API_KEY", "your-api-key")
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        
+        # URL de l'API Mailgun (utilise le domaine EU)
+        api_url = f"https://api.eu.mailgun.net/v3/{mailgun_domain}/messages"
+        
+        # URL de vérification
         verification_url = f"{frontend_url}/verify-email?token={verification_token}"
         
-        html_content = f"""
-        <html>
-        <body>
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <img src="https://bubblehack.fr/logo.svg" alt="Bubble Cleaner" style="height: 60px; width: auto;">
-                </div>
-                <h2 style="color: #667eea; text-align: center;">Bubble Cleaner - Vérification d'email</h2>
-                
-                <p>Bonjour {username},</p>
-                
-                <p>Merci de vous être inscrit sur Bubble Cleaner ! Pour activer votre compte, veuillez vérifier votre adresse email.</p>
-                
-                <p>Cliquez sur le bouton ci-dessous pour vérifier votre email :</p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" 
-                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                              color: white; 
-                              padding: 12px 24px; 
-                              text-decoration: none; 
-                              border-radius: 8px; 
-                              display: inline-block;">
-                        Vérifier mon email
-                    </a>
-                </div>
-                
-                <p>Si le bouton ne fonctionne pas, vous pouvez copier et coller ce lien dans votre navigateur :</p>
-                <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
-                
-                <p><strong>Ce lien expirera dans 24 heures.</strong></p>
-                
-                <p>Une fois votre email vérifié, vous pourrez vous connecter et utiliser toutes les fonctionnalités de Bubble Cleaner.</p>
-                
-                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-                
-                <p style="color: #6b7280; font-size: 14px; text-align: center;">
-                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
+        # Données de l'email
+        data = {
+            "from": f"Bubble Hack <noreply@{mailgun_domain}>",
+            "to": f"{username} <{email}>",
+            "subject": "Vérification de votre compte Bubble Hack",
+            "text": f"""
+Bonjour {username},
+
+Bienvenue sur Bubble Hack ! 
+
+Pour activer votre compte, cliquez sur le lien suivant :
+{verification_url}
+
+Ce lien est valide pendant 24 heures.
+
+Si vous n'avez pas créé de compte, ignorez cet email.
+
+Cordialement,
+L'équipe Bubble Hack
+            """,
+            "html": f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Vérification de votre compte</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://bubblehack.fr/logo.svg" alt="Bubble Hack" style="height: 60px; width: auto;">
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #333;">🎉 Bienvenue sur Bubble Hack !</h1>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Bonjour {username},</h2>
+        <p style="color: #666; line-height: 1.6;">
+            Merci de vous être inscrit sur Bubble Hack ! Pour activer votre compte et commencer à nettoyer vos bulles de manga, 
+            cliquez sur le bouton ci-dessous :
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{verification_url}" 
+           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                  color: white; 
+                  padding: 15px 30px; 
+                  text-decoration: none; 
+                  border-radius: 5px; 
+                  font-weight: bold; 
+                  display: inline-block;">
+            ✅ Vérifier mon compte
+        </a>
+    </div>
+    
+    <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px;">
+        <p style="color: #856404; margin: 0; font-size: 14px;">
+            <strong>⚠️ Important :</strong> Ce lien est valide pendant 24 heures. 
+            Si vous n'avez pas créé de compte, ignorez cet email.
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 12px;">
+            Cordialement,<br>
+            L'équipe Bubble Hack
+        </p>
+    </div>
+</body>
+</html>
+            """
+        }
         
-        message = MessageSchema(
-            subject="Bubble Cleaner - Vérification d'email",
-            recipients=[email],
-            body=html_content,
-            subtype="html"
+        print(f"📧 Envoi email via Mailgun API vers {email}")
+        print(f"🌐 Domaine Mailgun: {mailgun_domain}")
+        print(f"🔗 URL de vérification: {verification_url}")
+        
+        # Envoi via l'API Mailgun
+        response = requests.post(
+            api_url,
+            auth=("api", mailgun_api_key),
+            data=data,
+            timeout=30
         )
         
-        await fm.send_message(message)
-        print(f"✅ Email de vérification envoyé à {email}")
-        return True
+        print(f"📡 Réponse Mailgun: {response.status_code}")
         
+        if response.status_code == 200:
+            print(f"✅ Email de vérification envoyé à {email}")
+            return True
+        else:
+            print(f"❌ Erreur API Mailgun: {response.status_code} - {response.text}")
+            return False
+            
     except Exception as e:
         print(f"❌ Erreur lors de l'envoi de l'email de vérification: {e}")
         
-        # En mode développement, simuler l'envoi
+        # En mode développement, on peut continuer sans email
         if os.getenv("ENVIRONMENT") == "development":
-            print(f"🔧 Mode développement : Email de vérification simulé pour {email}")
-            print(f"🔗 Token de vérification : {verification_token}")
-            print(f"🔗 URL de vérification : {verification_url}")
+            print(f"🔧 Mode développement: Email simulé pour {email}")
+            print(f"🔗 Token de vérification: {verification_token}")
             return True
+        
         return False 
