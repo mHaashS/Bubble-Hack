@@ -67,19 +67,48 @@ PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
 
-# Essayer de charger le modèle local, sinon utiliser le modèle par défaut
-model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
-if os.path.exists(model_path):
+# Télécharger le modèle depuis Hugging Face si nécessaire
+def get_model_path():
+    """Obtenir le chemin du modèle, le télécharger depuis Hugging Face si nécessaire"""
+    model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
+    
+    if os.path.exists(model_path):
+        print(f"✅ Modèle local trouvé: {model_path}")
+        return model_path
+    
+    print("🔧 Modèle local non trouvé, téléchargement depuis Hugging Face...")
     try:
-        cfg.MODEL.WEIGHTS = model_path
-        logger.info(f"Chargement du modèle local: {model_path}")
+        from huggingface_hub import hf_hub_download
+        model_path = hf_hub_download(
+            repo_id="HaashS/modelev1",
+            filename="model_final.pth",
+            local_dir=os.path.join(PROJECT_DIR, "models_ai")
+        )
+        print(f"✅ Modèle téléchargé depuis Hugging Face: {model_path}")
+        return model_path
     except Exception as e:
-        logger.warning(f"Erreur lors du chargement du modèle local: {e}")
-        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-        logger.info("Utilisation du modèle par défaut Detectron2")
-else:
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-    logger.info("Modèle local non trouvé, utilisation du modèle par défaut Detectron2")
+        print(f"❌ Erreur téléchargement Hugging Face: {e}")
+        raise Exception(f"Impossible de télécharger le modèle depuis Hugging Face: {e}")
+
+# Obtenir le chemin du modèle
+model_path = get_model_path()
+print(f"🔧 Chemin du modèle: {model_path}")
+
+# Vérifier la taille du fichier
+file_size = os.path.getsize(model_path)
+print(f"🔧 Taille du fichier: {file_size} bytes")
+
+# Vérifier si le fichier est valide
+try:
+    import torch
+    test_model = torch.load(model_path, map_location='cpu', weights_only=False)
+    print(f"✅ Modèle valide (taille: {file_size} bytes)")
+    cfg.MODEL.WEIGHTS = model_path
+    logger.info(f"Chargement du modèle personnalisé: {model_path}")
+except Exception as e:
+    logger.error(f"Erreur lors de la validation du modèle personnalisé: {e}")
+    print(f"❌ Erreur validation modèle personnalisé: {e}")
+    raise Exception(f"Impossible de charger le modèle personnalisé: {e}")
 
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3
