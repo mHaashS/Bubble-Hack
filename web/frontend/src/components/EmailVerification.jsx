@@ -25,7 +25,13 @@ const EmailVerification = () => {
         try {
             setStatus('loading');
             
-            const response = await fetch(`http://localhost:8000/verify-email?token=${verificationToken}`, {
+            // Utiliser la même logique d'URL que authService
+            const API_BASE_URL = process.env.REACT_APP_API_URL ||
+                (process.env.NODE_ENV === 'production'
+                    ? 'https://bubble-hack-production.up.railway.app'  // Production (Railway)
+                    : 'http://localhost:8000');      // Développement local
+            
+            const response = await fetch(`${API_BASE_URL}/verify-email?token=${verificationToken}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,11 +71,17 @@ const EmailVerification = () => {
             setStatus('loading');
             setMessage('Envoi en cours...');
             
+            // Utiliser la même logique d'URL que authService
+            const API_BASE_URL = process.env.REACT_APP_API_URL ||
+                (process.env.NODE_ENV === 'production'
+                    ? 'https://bubble-hack-production.up.railway.app'  // Production (Railway)
+                    : 'http://localhost:8000');      // Développement local
+            
             // Demander l'email à l'utilisateur
             const email = prompt('Veuillez entrer votre adresse email :');
             if (!email) return;
 
-            const response = await fetch('http://localhost:8000/resend-verification', {
+            const response = await fetch(`${API_BASE_URL}/resend-verification`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
