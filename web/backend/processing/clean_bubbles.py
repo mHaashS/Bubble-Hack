@@ -32,15 +32,30 @@ def get_model_path():
     print("🔧 Modèle local non trouvé, téléchargement depuis Hugging Face...")
     try:
         from huggingface_hub import hf_hub_download
-        model_path = hf_hub_download(
-            repo_id="HaashS/modelev1",
-            filename="model_final.pth",
-            local_dir=os.path.join(PROJECT_DIR, "models_ai")
-        )
-        print(f"✅ Modèle téléchargé depuis Hugging Face: {model_path}")
-        return model_path
+        import time
+        
+        # Retry avec timeout
+        for attempt in range(3):
+            try:
+                print(f"🔧 Tentative {attempt + 1}/3...")
+                model_path = hf_hub_download(
+                    repo_id="HaashS/modelev1",
+                    filename="model_final.pth",
+                    local_dir=os.path.join(PROJECT_DIR, "models_ai"),
+                    local_files_only=False,
+                    resume_download=True
+                )
+                print(f"✅ Modèle téléchargé depuis Hugging Face: {model_path}")
+                return model_path
+            except Exception as e:
+                print(f"⚠️  Tentative {attempt + 1} échouée: {e}")
+                if attempt < 2:
+                    print("🔄 Nouvelle tentative dans 5 secondes...")
+                    time.sleep(5)
+                else:
+                    raise e
     except Exception as e:
-        print(f"❌ Erreur téléchargement Hugging Face: {e}")
+        print(f"❌ Erreur téléchargement Hugging Face après 3 tentatives: {e}")
         raise Exception(f"Impossible de télécharger le modèle depuis Hugging Face: {e}")
 
 # Obtenir le chemin du modèle

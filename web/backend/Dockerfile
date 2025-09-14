@@ -28,9 +28,8 @@ RUN pip install --upgrade pip \
  && pip install --no-cache-dir huggingface_hub \
  && rm -rf /root/.cache/*
 
-# Télécharger le modèle depuis Hugging Face
-RUN mkdir -p /app/models_ai \
- && python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='HaashS/modelev1', filename='model_final.pth', local_dir='/app/models_ai')"
+# Créer le dossier pour le modèle (téléchargement au runtime)
+RUN mkdir -p /app/models_ai
 
 # Copier uniquement le code source nécessaire
 COPY . .
