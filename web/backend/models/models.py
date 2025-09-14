@@ -143,3 +143,34 @@ class Payment(Base):
     # Relations
     user = relationship("User", back_populates="payments")
     subscription = relationship("Subscription", back_populates="payments")
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String, unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relations
+    user = relationship("User")
+
+class AbuseTracking(Base):
+    __tablename__ = "abuse_tracking"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, nullable=False, index=True)
+    user_agent = Column(Text, nullable=True)
+    device_fingerprint = Column(String, nullable=True, index=True)
+    email_domain = Column(String, nullable=True, index=True)
+    account_count = Column(Integer, default=1)
+    last_activity = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Index composite pour les requêtes fréquentes
+    __table_args__ = (
+        Index('ix_abuse_tracking_ip_device', 'ip_address', 'device_fingerprint'),
+        Index('ix_abuse_tracking_ip_domain', 'ip_address', 'email_domain'),
+    )

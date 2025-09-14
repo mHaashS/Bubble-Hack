@@ -20,6 +20,18 @@ class AuthService {
         localStorage.setItem('user', JSON.stringify(user));
     }
 
+    // Sauvegarder seulement le token
+    setToken(token) {
+        this.token = token;
+        localStorage.setItem('authToken', token);
+    }
+
+    // Sauvegarder seulement l'utilisateur
+    setUser(user) {
+        this.user = user;
+        localStorage.setItem('user', JSON.stringify(user));
+    }
+
     // Récupérer le token
     getToken() {
         return this.token;
@@ -89,18 +101,9 @@ class AuthService {
 
             const user = await response.json();
             
-            // Connexion automatique après inscription réussie
-            const loginResult = await this.login({
-                email: userData.email,
-                password: userData.password
-            });
-            
-            if (loginResult.success) {
-                return { success: true, user: loginResult.user };
-            } else {
-                // Si la connexion automatique échoue, on retourne quand même l'utilisateur créé
-                return { success: true, user: user, warning: 'Inscription réussie mais connexion automatique échouée' };
-            }
+            // Avec le nouveau système de vérification email, on ne connecte plus automatiquement
+            // L'utilisateur devra vérifier son email avant de pouvoir se connecter
+            return { success: true, user: user };
         } catch (error) {
             return { success: false, error: error.message };
         }

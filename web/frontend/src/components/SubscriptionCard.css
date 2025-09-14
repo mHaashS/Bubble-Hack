@@ -57,7 +57,6 @@
     padding: 20px 16px 16px;
     text-align: center;
     background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    opacity: 0.6;
     position: relative;
     border-radius: 12px 12px 0 0;
     color: white;
@@ -73,20 +72,20 @@
 
 .subscription-card.current .card-header {
     background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    color: white;
-    opacity: 0.6;
+}
+
+.subscription-card.dark-mode.current .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
+    opacity: 1;
 }
 
 .subscription-card.free .card-header {
     background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    opacity: 0.6;
-    color: white;
 }
 
-.subscription-card.dark-mode.free .card-header {
-    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    opacity: 0.6;
-    color: white;
+.subscription-card.dark-mode.free.current .card-header {
+    background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%) !important;
+    opacity: 1;
 }
 
 .subscription-card.premium:not(.current) .card-header {
@@ -97,8 +96,6 @@
 
 .subscription-card.premium.current .card-header {
     background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    color: white;
-    opacity: 0.6;
 }
 
 .subscription-card.basic:not(.current) .card-header {
@@ -109,8 +106,6 @@
 
 .subscription-card.basic.current .card-header {
     background: linear-gradient(90deg, #00AEFF 0%, #0030FF 50%, #5100FF 100%);
-    color: white;
-    opacity: 0.6;
 }
 
 .plan-name {
@@ -310,12 +305,13 @@
 }
 
 .subscription-button.basic:not(.current) {
-    background: linear-gradient(90deg, #0030FF 0%, #5100FF 100%);
+    background: linear-gradient(90deg, #00AEFF 0%, #5100FF 100%);
     color: white;
 }
 
 .subscription-button.basic:not(.current):hover {
-    background: linear-gradient(90deg, #00AEFF 0%, #5100FF 100%);
+    
+    background: linear-gradient(90deg, #0030FF 0%, #5100FF 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 48, 255, 0.3);
 }

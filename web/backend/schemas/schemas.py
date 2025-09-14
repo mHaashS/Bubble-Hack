@@ -185,4 +185,10 @@ class CheckoutSessionResponse(BaseModel):
 class SubscriptionStatus(BaseModel):
     current_subscription: Optional[UsersSubscription] = None
     available_subscriptions: List[Subscription] = []
-    quotas: Dict[str, int] = {} 
+    quotas: Dict[str, int] = {}
+
+class EmailVerificationRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: str 

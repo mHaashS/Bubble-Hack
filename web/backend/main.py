@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from typing import List
 
 import time
+import hashlib
+import secrets
 
 import os
 
@@ -110,39 +112,73 @@ async def root():
 
 @app.post("/register", response_model=schemas.User)
 
-async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(user: schemas.UserCreate, request: Request, db: Session = Depends(get_db)):
 
-    """Inscription d'un nouvel utilisateur"""
+    """Inscription d'un nouvel utilisateur avec protection anti-abus"""
 
     # Validation du mot de passe
     if len(user.password) < 8:
         raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 8 caractères")
 
+    # Récupérer les informations de l'utilisateur pour l'anti-abus
+    client_ip = request.client.host
+    user_agent = request.headers.get("user-agent", "")
+    
+    # Générer un device fingerprint basique (peut être amélioré)
+    device_fingerprint = hashlib.md5(f"{client_ip}{user_agent}".encode()).hexdigest()
+    email_domain = user.email.split('@')[1] if '@' in user.email else None
+    
+    # Vérifier les limites anti-abus (désactivable en développement)
+    import os
+    max_accounts = int(os.getenv("MAX_ACCOUNTS_PER_IP", "10"))  # 10 par défaut, 3 en production
+    
+    is_abuse, abuse_message = crud.check_abuse_limits(
+        db, 
+        ip_address=client_ip,
+        device_fingerprint=device_fingerprint,
+        email_domain=email_domain,
+        max_accounts=max_accounts
+    )
+    
+    if is_abuse:
+        raise HTTPException(status_code=429, detail=abuse_message)
+
     # Vérifier si l'email existe déjà
-
     db_user = crud.get_user_by_email(db, email=user.email)
-
     if db_user:
-
         raise HTTPException(status_code=400, detail="Email déjà enregistré")
 
-    
-
     # Vérifier si le username existe déjà
-
     db_user = crud.get_user_by_username(db, username=user.username)
-
     if db_user:
-
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà pris")
 
-    
-
-    # Créer l'utilisateur
-
+    # Créer l'utilisateur (non vérifié par défaut)
     hashed_password = get_password_hash(user.password)
-
     db_user = crud.create_user(db, user.email, user.username, hashed_password)
+    
+    # Marquer l'utilisateur comme non vérifié
+    db_user.is_verified = False
+    db.commit()
+    db.refresh(db_user)
+    
+    # Enregistrer la création du compte pour l'anti-abus
+    crud.track_account_creation(
+        db,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        device_fingerprint=device_fingerprint,
+        email_domain=email_domain
+    )
+    
+    # Créer un token de vérification email
+    verification_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=24)
+    crud.create_email_verification(db, db_user.id, verification_token, expires_at)
+    
+    # Envoyer l'email de vérification
+    from services.email_service import send_verification_email
+    await send_verification_email(db_user.email, db_user.username, verification_token)
 
     
 
@@ -184,7 +220,23 @@ async def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_d
 
         )
 
-    
+    # Vérifier que l'email est vérifié (sauf pour les comptes créés avant l'implémentation)
+    if not user.is_verified:
+        # Vérifier si c'est un compte ancien (créé avant l'implémentation de la vérification)
+        # Les comptes créés avant le 13 septembre 2025 sont considérés comme "anciens"
+        from datetime import timezone
+        cutoff_date = datetime(2025, 9, 13, tzinfo=timezone.utc)
+        if user.created_at and user.created_at < cutoff_date:
+            # Compte ancien : marquer comme vérifié automatiquement
+            user.is_verified = True
+            db.commit()
+            db.refresh(user)
+        else:
+            # Nouveau compte : vérification obligatoire
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Veuillez vérifier votre email avant de vous connecter. Un email de vérification a été envoyé à votre adresse."
+            )
 
     # Créer le token d'accès
 
@@ -742,6 +794,87 @@ async def change_password(
     
 
     return {"message": "Mot de passe mis à jour avec succès"}
+
+@app.post("/verify-email")
+async def verify_email(request: schemas.EmailVerificationRequest, db: Session = Depends(get_db)):
+    """Vérification de l'email avec un token"""
+    
+    # Vérifier le token
+    verification = crud.get_email_verification_by_token(db, request.token)
+    if not verification:
+        raise HTTPException(status_code=400, detail="Token invalide ou expiré")
+    
+    # Marquer l'utilisateur comme vérifié
+    user = crud.get_user_by_id(db, verification.user_id)
+    if user:
+        user.is_verified = True
+        db.commit()
+        db.refresh(user)
+    
+    # Marquer le token comme utilisé
+    crud.mark_email_verification_used(db, request.token)
+    
+    return {"message": "Email vérifié avec succès"}
+
+@app.post("/resend-verification")
+async def resend_verification(request: schemas.ResendVerificationRequest, db: Session = Depends(get_db)):
+    """Renvoyer l'email de vérification"""
+    
+    # Trouver l'utilisateur par email
+    user = crud.get_user_by_email(db, request.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    if user.is_verified:
+        raise HTTPException(status_code=400, detail="Email déjà vérifié")
+    
+    # Créer un nouveau token de vérification
+    verification_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=24)
+    crud.create_email_verification(db, user.id, verification_token, expires_at)
+    
+    # Envoyer l'email de vérification
+    from services.email_service import send_verification_email
+    await send_verification_email(user.email, user.username, verification_token)
+    
+    return {"message": "Email de vérification renvoyé"}
+
+@app.get("/verify-email")
+async def verify_email_get(token: str, db: Session = Depends(get_db)):
+    """Vérification de l'email avec un token (GET pour les liens dans les emails)"""
+    
+    # Vérifier le token
+    verification = crud.get_email_verification_by_token(db, token)
+    if not verification:
+        raise HTTPException(status_code=400, detail="Token invalide ou expiré")
+    
+    # Marquer l'utilisateur comme vérifié
+    user = crud.get_user_by_id(db, verification.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    user.is_verified = True
+    db.commit()
+    db.refresh(user)
+    
+    # Marquer le token comme utilisé
+    crud.mark_email_verification_used(db, token)
+    
+    # Créer un token d'accès pour connecter automatiquement l'utilisateur
+    access_token = create_access_token(data={"sub": user.email})
+    
+    return {
+        "message": "Email vérifié avec succès", 
+        "verified": True,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "is_verified": user.is_verified
+        }
+    }
 
 
 

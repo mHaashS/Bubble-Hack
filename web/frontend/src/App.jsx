@@ -13,6 +13,8 @@ import QuotaDisplay from './components/QuotaDisplay';
 import ProfileModal from './components/ProfileModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
 import PricingPage from './components/PricingPage';
+import EmailVerification from './components/EmailVerification';
+import EmailVerificationPopup from './components/EmailVerificationPopup';
 import authService from './services/authService';
 
 function App() {
@@ -31,6 +33,8 @@ function App() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showPricingPage, setShowPricingPage] = useState(false);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [showEmailVerificationPopup, setShowEmailVerificationPopup] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   
   // === ÉTATS DES MODALES ===
   const [modalOpen, setModalOpen] = useState(false);
@@ -50,6 +54,9 @@ function App() {
       window.history.replaceState({}, document.title, '/');
     }
   }, []);
+
+  // === VÉRIFICATION DE LA ROUTE ===
+  const isEmailVerificationPage = window.location.pathname === '/verify-email' && window.location.search.includes('token=');
 
   useEffect(() => {
     document.body.className = darkMode ? 'dark-mode' : '';
@@ -73,7 +80,9 @@ function App() {
     // Vérifier s'il y a un token de récupération dans l'URL
     const urlParams = new URLSearchParams(window.location.search);
     const resetToken = urlParams.get('token');
-    if (resetToken) {
+    
+    // Ne pas ouvrir la modale de récupération si on est sur la page de vérification email
+    if (resetToken && !isEmailVerificationPage) {
       console.log("🔑 Token de récupération détecté dans l'URL");
       setShowResetPasswordModal(true);
       // Nettoyer l'URL
@@ -95,9 +104,16 @@ function App() {
     setShowLoginModal(false);
   };
 
-  const handleRegisterSuccess = (userData) => {
+  const handleRegisterSuccess = (userData, email) => {
     setUser(userData);
     setShowRegisterModal(false);
+    
+    // Afficher la popup de vérification email
+    if (email) {
+      setRegisteredEmail(email);
+      setShowEmailVerificationPopup(true);
+      console.log('🎉 Popup de vérification email affichée depuis App.jsx');
+    }
   };
 
   const handleLogout = () => {
@@ -382,6 +398,14 @@ function App() {
     return (
       <div className={`app-bg ${darkMode ? 'dark-mode' : ''}`}>
         <PricingPage onClose={() => setShowPricingPage(false)} />
+      </div>
+    );
+  }
+
+  if (isEmailVerificationPage) {
+    return (
+      <div className={`app-bg ${darkMode ? 'dark-mode' : ''}`}>
+        <EmailVerification />
       </div>
     );
   }
@@ -1004,6 +1028,14 @@ function App() {
           setShowLoginModal(true);
         }}
       />
+
+      {/* Popup de vérification email globale */}
+      <EmailVerificationPopup 
+        isOpen={showEmailVerificationPopup}
+        onClose={() => setShowEmailVerificationPopup(false)}
+        email={registeredEmail}
+      />
+
     </div>
   );
 }

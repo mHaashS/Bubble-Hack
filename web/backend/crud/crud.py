@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
+from sqlalchemy import and_, or_, func
 from models import models
 from datetime import datetime, timedelta
 import secrets
@@ -483,6 +483,123 @@ def cleanup_expired_password_resets(db: Session):
     
     db.commit()
     return len(expired_tokens)
+
+# === FONCTIONS ANTI-ABUS ===
+
+def create_email_verification(db: Session, user_id: int, token: str, expires_at: datetime):
+    """Crée un token de vérification email"""
+    verification = models.EmailVerification(
+        user_id=user_id,
+        token=token,
+        expires_at=expires_at
+    )
+    db.add(verification)
+    db.commit()
+    db.refresh(verification)
+    return verification
+
+def get_email_verification_by_token(db: Session, token: str):
+    """Récupère un token de vérification email"""
+    return db.query(models.EmailVerification).filter(
+        and_(
+            models.EmailVerification.token == token,
+            models.EmailVerification.is_used == False,
+            models.EmailVerification.expires_at > datetime.utcnow()
+        )
+    ).first()
+
+def mark_email_verification_used(db: Session, token: str):
+    """Marque un token de vérification comme utilisé"""
+    verification = get_email_verification_by_token(db, token)
+    if verification:
+        verification.is_used = True
+        db.commit()
+        db.refresh(verification)
+    return verification
+
+def track_account_creation(db: Session, ip_address: str, user_agent: str = None, 
+                          device_fingerprint: str = None, email_domain: str = None):
+    """Enregistre la création d'un compte pour détecter les abus"""
+    # Chercher un enregistrement existant
+    existing = db.query(models.AbuseTracking).filter(
+        and_(
+            models.AbuseTracking.ip_address == ip_address,
+            or_(
+                models.AbuseTracking.device_fingerprint == device_fingerprint,
+                models.AbuseTracking.email_domain == email_domain
+            )
+        )
+    ).first()
+    
+    if existing:
+        # Mettre à jour le compteur
+        existing.account_count += 1
+        existing.last_activity = datetime.utcnow()
+        if user_agent:
+            existing.user_agent = user_agent
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        # Créer un nouvel enregistrement
+        tracking = models.AbuseTracking(
+            ip_address=ip_address,
+            user_agent=user_agent,
+            device_fingerprint=device_fingerprint,
+            email_domain=email_domain,
+            account_count=1
+        )
+        db.add(tracking)
+        db.commit()
+        db.refresh(tracking)
+        return tracking
+
+def check_abuse_limits(db: Session, ip_address: str, device_fingerprint: str = None, 
+                      email_domain: str = None, max_accounts: int = 3):
+    """Vérifie si une adresse IP/appareil a dépassé les limites"""
+    # Vérifier par IP + device fingerprint
+    if device_fingerprint:
+        tracking = db.query(models.AbuseTracking).filter(
+            and_(
+                models.AbuseTracking.ip_address == ip_address,
+                models.AbuseTracking.device_fingerprint == device_fingerprint
+            )
+        ).first()
+        if tracking and tracking.account_count >= max_accounts:
+            return True, f"Trop de comptes créés depuis cette adresse IP et cet appareil (limite: {max_accounts})"
+    
+    # Vérifier par IP + domaine email
+    if email_domain:
+        tracking = db.query(models.AbuseTracking).filter(
+            and_(
+                models.AbuseTracking.ip_address == ip_address,
+                models.AbuseTracking.email_domain == email_domain
+            )
+        ).first()
+        if tracking and tracking.account_count >= max_accounts:
+            return True, f"Trop de comptes créés depuis cette adresse IP avec ce domaine email (limite: {max_accounts})"
+    
+    # Vérifier par IP seulement
+    tracking = db.query(models.AbuseTracking).filter(
+        models.AbuseTracking.ip_address == ip_address
+    ).first()
+    if tracking and tracking.account_count >= max_accounts * 2:  # Limite plus élevée pour IP seule
+        return True, f"Trop de comptes créés depuis cette adresse IP (limite: {max_accounts * 2})"
+    
+    return False, None
+
+def cleanup_old_abuse_tracking(db: Session, days: int = 30):
+    """Nettoie les anciens enregistrements de tracking"""
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    old_records = db.query(models.AbuseTracking).filter(
+        models.AbuseTracking.last_activity < cutoff_date
+    ).all()
+    
+    for record in old_records:
+        db.delete(record)
+    
+    db.commit()
+    return len(old_records)
 
 # === FONCTIONS POUR LES ABONNEMENTS ===
 
