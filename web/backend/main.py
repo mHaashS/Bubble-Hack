@@ -79,7 +79,8 @@ origins = [
     "http://localhost:3000",
     "https://www.bubblehack.fr",
     "https://bubble-cleaner-frontend.vercel.app",
-    "https://bubble-hack.vercel.app"
+    "https://bubble-hack.vercel.app",
+    "https://bubblehack.vercel.app"
 ]
 
 
