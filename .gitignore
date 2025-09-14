@@ -19,6 +19,7 @@ __pycache__/
 web/backend/output/
 web/backend/data/
 web/backend/.env
+web/backend/models_ai/
 
 # Nouveaux dossiers organisés
 web/backend/logs/

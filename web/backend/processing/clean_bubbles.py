@@ -20,13 +20,32 @@ print(f"🔧 PROJECT_DIR: {PROJECT_DIR}")
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
 
-# Utiliser uniquement le modèle personnalisé
-model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
-print(f"🔧 Chemin du modèle local: {model_path}")
-print(f"🔧 Le fichier existe: {os.path.exists(model_path)}")
+# Télécharger le modèle depuis Hugging Face si nécessaire
+def get_model_path():
+    """Obtenir le chemin du modèle, le télécharger depuis Hugging Face si nécessaire"""
+    model_path = os.path.join(PROJECT_DIR, "models_ai", "model_final.pth")
+    
+    if os.path.exists(model_path):
+        print(f"✅ Modèle local trouvé: {model_path}")
+        return model_path
+    
+    print("🔧 Modèle local non trouvé, téléchargement depuis Hugging Face...")
+    try:
+        from huggingface_hub import hf_hub_download
+        model_path = hf_hub_download(
+            repo_id="HaashS/modelev1",
+            filename="model_final.pth",
+            local_dir=os.path.join(PROJECT_DIR, "models_ai")
+        )
+        print(f"✅ Modèle téléchargé depuis Hugging Face: {model_path}")
+        return model_path
+    except Exception as e:
+        print(f"❌ Erreur téléchargement Hugging Face: {e}")
+        raise Exception(f"Impossible de télécharger le modèle depuis Hugging Face: {e}")
 
-if not os.path.exists(model_path):
-    raise FileNotFoundError(f"Modèle personnalisé non trouvé: {model_path}")
+# Obtenir le chemin du modèle
+model_path = get_model_path()
+print(f"🔧 Chemin du modèle: {model_path}")
 
 # Vérifier la taille du fichier
 file_size = os.path.getsize(model_path)
@@ -36,7 +55,7 @@ print(f"🔧 Taille du fichier: {file_size} bytes")
 try:
     import torch
     test_model = torch.load(model_path, map_location='cpu', weights_only=False)
-    print(f"✅ Modèle local valide (taille: {file_size} bytes)")
+    print(f"✅ Modèle valide (taille: {file_size} bytes)")
     cfg.MODEL.WEIGHTS = model_path
     logger.info(f"Chargement du modèle personnalisé: {model_path}")
 except Exception as e:

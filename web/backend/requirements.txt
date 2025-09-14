@@ -13,6 +13,7 @@ psycopg2-binary
 easyocr==1.7.0
 numpy==1.24.3
 opencv-python-headless==4.11.0.86
+huggingface_hub==0.25.1
 
 # Authentication & Security
 passlib==1.7.4
